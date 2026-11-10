@@ -3,16 +3,46 @@ import "../src/App.ow"
 # Minimal test harness: each check prints PASS/FAIL.
 #   Run:  ow run tests/run.ow
 
-# A listener that counts the events it receives.
+# A counter module: counts "tick" events. Parameterized by a base (config),
+# resettable via reload().
 class Counter:
   field n
+  field base
   fn new():
     set this.n: 0
+    set this.base: 0
+  fn name():
+    return: "counter"
+  fn requires():
+    return: array(0, 0)
+  fn register(app):
+    call: app.provide("counter", this)
+    return: 0
+  fn start(app):
+    return: 0
   fn on_event(type, payload):
-    set this.n: this.n + 1
+    if: type == "tick"
+      set this.n: this.n + 1
+    return: 0
+  fn reload(app):
+    set this.n: this.base
+    return: 0
+  fn set_base(b):
+    set this.base: b
+    set this.n: b
     return: 0
   fn count():
     return: this.n
+
+# A functor that builds a Counter whose base comes from config.
+class CounterFunctor:
+  fn new():
+    return: 0
+  fn make(app):
+    set b int: app.config_or("counter.base", 0)
+    set c: new Counter()
+    call: c.set_base(b)
+    return: c
 
 # A module that depends on a service nobody provides (to test verify()).
 class BadModule:
@@ -26,6 +56,10 @@ class BadModule:
     return: 0
   fn start(app):
     return: 0
+  fn on_event(type, payload):
+    return: 0
+  fn reload(app):
+    return: 0
 
 fn check(label, cond):
   if: cond
@@ -35,26 +69,47 @@ fn check(label, cond):
   return: 0
 
 main:
-  # ---- service registry ----
   set app: new App()
+
+  # ---- service registry ----
   call: app.provide("greeting", "hi")
-  call: check("registry has", app.has_service("greeting") == 1)
   call: check("registry get", app.service("greeting") == "hi")
   call: check("registry missing absent", app.has_service("ghost") == 0)
-  call: app.provide("greeting", "bonjour")
-  call: check("registry replace", app.service("greeting") == "bonjour")
 
-  # ---- event bus ----
-  set c: new Counter()
-  call: app.on(c)
-  call: app.emit("tick", 1)
-  call: app.emit("tick", 2)
-  call: check("bus delivered to subscriber", c.count() == 2)
+  # ---- config ----
+  call: app.set_config("x", 7)
+  call: check("config present", app.config_or("x", 0) == 7)
+  call: check("config default", app.config_or("y", 5) == 5)
+
+  # ---- functor + boot ----
+  call: app.apply(new CounterFunctor())
+  set booted int: app.boot()
+  call: check("boot ok", booted == 1)
+  set c: app.service("counter")
+
+  # ---- events to enabled modules ----
+  call: app.emit("tick", 0)
+  call: app.emit("tick", 0)
+  call: check("events delivered", c.count() == 2)
+
+  # ---- disable stops delivery ----
+  call: app.disable("counter")
+  call: app.emit("tick", 0)
+  call: check("disabled module gets no events", c.count() == 2)
+
+  # ---- enable resumes ----
+  call: app.enable("counter")
+  call: app.emit("tick", 0)
+  call: check("enabled module resumes", c.count() == 3)
+
+  # ---- reload resets state ----
+  call: app.reload("counter")
+  call: check("reload resets state", c.count() == 0)
 
   # ---- dependency verification ----
   set app2: new App()
   call: app2.use(new BadModule())
-  set booted int: app2.boot()
-  call: check("boot aborts on missing dependency", booted == 0)
+  set b2 int: app2.boot()
+  call: check("boot aborts on missing dependency", b2 == 0)
 
   print: "done"

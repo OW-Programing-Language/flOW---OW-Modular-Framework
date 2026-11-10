@@ -1,6 +1,6 @@
-# Orders module: places orders by publishing "order.placed" events. It declares
-# a dependency on the "inventory" service (checked by App.verify at boot) but
-# talks to the rest of the app only through events.
+# Orders module: places orders by publishing "order.placed" events. Declares a
+# dependency on the "inventory" service (checked by App.verify at boot) but talks
+# to the rest of the app only through events.
 class OrdersModule:
   fn new():
     return: 0
@@ -22,4 +22,7 @@ class OrdersModule:
     return: 0
 
   fn on_event(type, payload):
+    return: 0
+
+  fn reload(app):
     return: 0

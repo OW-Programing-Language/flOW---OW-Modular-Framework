@@ -1,19 +1,28 @@
 import "../../src/App.ow"
-import "InventoryModule.ow"
+import "InventoryFunctor.ow"
 import "NotifyModule.ow"
 import "OrdersModule.ow"
 
-# A tiny modular monolith built with flOW.
+# A tiny modular monolith built with flOW, showing all the module controls:
+#   - config + functor: InventoryModule's starting stock is parameterized
+#   - events: Orders publishes; Inventory and Notify react (decoupled)
+#   - disable: silence Notify at runtime
+#   - reload: reset Inventory's state
 #
 #   Run:  ow run examples/shop/main.ow
-#
-# Three independent modules are composed by the App. Orders publishes events;
-# Inventory and Notify react — none of them reference each other directly.
 main:
   set app: new App()
-  call: app.use(new InventoryModule())
+  call: app.set_config("inventory.stock", 25)
+  call: app.apply(new InventoryFunctor())
   call: app.use(new NotifyModule())
   call: app.use(new OrdersModule())
   call: app.boot()
+
+  print: "--- disable notify, place another order ---"
+  call: app.disable("notify")
+  call: app.emit("order.placed", 5)
+
+  print: "--- reload inventory ---"
+  call: app.reload("inventory")
   set inv: app.service("inventory")
   print: "final stock: " + inv.level()

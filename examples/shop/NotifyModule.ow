@@ -1,5 +1,5 @@
-# Notify module: reacts to orders by sending a (printed) notification. It is
-# completely decoupled from the orders and inventory modules.
+# Notify module: reacts to orders by sending a (printed) notification. Fully
+# decoupled; can be disabled at runtime (app.disable("notify")) to go silent.
 class NotifyModule:
   fn new():
     return: 0
@@ -11,7 +11,6 @@ class NotifyModule:
     return: array(0, 0)
 
   fn register(app):
-    call: app.on(this)
     return: 0
 
   fn start(app):
@@ -20,4 +19,7 @@ class NotifyModule:
   fn on_event(type, payload):
     if: type == "order.placed"
       print: "[notify] order confirmed for " + payload + " item(s)"
+    return: 0
+
+  fn reload(app):
     return: 0

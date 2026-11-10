@@ -1,17 +1,21 @@
 # flOW — application module contract.
 #
-# A module is a self-contained slice of the app. It declares a name, the
-# services it needs from other modules (its boundary/dependencies), and two
-# lifecycle hooks:
-#   register(app) — provide services and subscribe to events (wiring only)
-#   start(app)    — do work: emit events, use resolved services
+# A module is a self-contained slice of the app, managed by the App at runtime
+# (parameterizable via config, enable/disable, reload). Implement these methods:
 #
-#   name()     -> string
-#   requires() -> array of service names this module depends on
-#   register(app)
-#   start(app)
+#   name()                 -> string (unique module id, e.g. "sound")
+#   requires()             -> array of service names this module depends on
+#   register(app)          -> wire up: provide services, read config
+#   start(app)             -> run: emit events, use resolved services
+#   on_event(type, payload)-> react to events (no-op if not interested)
+#   reload(app)            -> reset this module's state (no-op if stateless)
+#
+# The App delivers every emitted event to each ENABLED module's on_event, so
+# modules stay decoupled — a publisher never references its subscribers.
 interface Module:
   fn name()
   fn requires()
   fn register(app)
   fn start(app)
+  fn on_event(type, payload)
+  fn reload(app)

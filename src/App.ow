@@ -1,34 +1,51 @@
 import "Registry.ow"
-import "EventBus.ow"
 
 # flOW — the application context.
 #
-# Holds the registered modules, a service Registry and an EventBus. Booting runs
-# three phases, mirroring a Spring-Modulith-style modular monolith:
-#   1. register — every module wires itself (provides services, subscribes)
-#   2. verify   — declared module dependencies must all be satisfied
-#   3. start    — every module runs its logic
+# Holds the registered modules, a service registry, a config store and the event
+# dispatch. Modules are first-class and manageable at runtime:
+#   - parameterizable: read settings via app.config_or("module.key", default)
+#   - enable / disable: a disabled module receives no events
+#   - reload: re-initialise a single module (reset its state)
 #
-# Modules never reference each other directly: they share named services and
-# communicate through published events.
+# Events are delivered to every ENABLED module's on_event(type, payload), so a
+# module never references the others — it just reacts to what is published.
+#
+# Boot lifecycle: register (wire) -> verify (deps) -> start (run).
 class App:
   field registry
-  field bus
-  field modules
-  field mcount
+  field config
+  field mods
+  field names
+  field enabled
+  field count
 
   fn new():
     set this.registry: new Registry()
-    set this.bus: new EventBus()
-    set this.modules: array(64, 0)
-    set this.mcount: 0
+    set this.config: new Registry()
+    set this.mods: array(64, 0)
+    set this.names: array(64, "")
+    set this.enabled: array(64, 1)
+    set this.count: 0
 
-  # Register a module (fluent-ish: call once per module before boot()).
   fn use(m):
-    set ms: this.modules
-    set ms[this.mcount]: m
-    set this.mcount: this.mcount + 1
+    set ms: this.mods
+    set ns: this.names
+    set es: this.enabled
+    set ms[this.count]: m
+    set ns[this.count]: m.name()
+    set es[this.count]: 1
+    set this.count: this.count + 1
     return: 0
+
+  # Apply a functor: build a module from this app context (its config/services)
+  # and register it. Analogous to an OCaml functor `module Make (Deps) = ...`,
+  # a functor parameterizes a module by what it reads from the app. Returns the
+  # produced module.
+  fn apply(f):
+    set m: f.make(this)
+    call: this.use(m)
+    return: m
 
   # ---- service container ----
   fn provide(name, val):
@@ -41,22 +58,73 @@ class App:
   fn has_service(name):
     return: this.registry.has(name)
 
-  # ---- event bus ----
-  fn on(listener):
-    call: this.bus.subscribe(listener)
+  # ---- config (per-module parameters, e.g. "sound.track") ----
+  fn set_config(key, val):
+    call: this.config.put(key, val)
     return: 0
 
+  fn config_or(key, fallback):
+    if: this.config.has(key) == 1
+      return: this.config.get(key)
+    return: fallback
+
+  # ---- module management ----
+  fn index_of(name):
+    set i int: 0
+    set found int: 99
+    while: i < this.count
+      if: this.names[i] == name
+        set found: i
+      set i: i + 1
+    return: found
+
+  fn is_enabled(name):
+    set idx int: this.index_of(name)
+    if: idx == 99
+      return: 0
+    return: this.enabled[idx]
+
+  fn enable(name):
+    set idx int: this.index_of(name)
+    if: idx == 99
+      return: 0
+    set es: this.enabled
+    set es[idx]: 1
+    return: 0
+
+  fn disable(name):
+    set idx int: this.index_of(name)
+    if: idx == 99
+      return: 0
+    set es: this.enabled
+    set es[idx]: 0
+    return: 0
+
+  # Re-initialise one module (calls its reload hook).
+  fn reload(name):
+    set idx int: this.index_of(name)
+    if: idx == 99
+      return: 0
+    set m: this.mods[idx]
+    call: m.reload(this)
+    return: 0
+
+  # ---- events: delivered to every enabled module ----
   fn emit(type, payload):
-    call: this.bus.publish(type, payload)
+    set i int: 0
+    while: i < this.count
+      if: this.enabled[i] == 1
+        set m: this.mods[i]
+        call: m.on_event(type, payload)
+      set i: i + 1
     return: 0
 
   # ---- lifecycle ----
-  # Check every module's declared dependencies are provided. Returns 1 if ok.
   fn verify():
     set i int: 0
     set ok int: 1
-    while: i < this.mcount
-      set m: this.modules[i]
+    while: i < this.count
+      set m: this.mods[i]
       set reqs: m.requires()
       set rn int: len(reqs)
       set r int: 0
@@ -69,11 +137,10 @@ class App:
       set i: i + 1
     return: ok
 
-  # Boot the application: register -> verify -> start.
   fn boot():
     set i int: 0
-    while: i < this.mcount
-      set m: this.modules[i]
+    while: i < this.count
+      set m: this.mods[i]
       call: m.register(this)
       set i: i + 1
     set ok int: this.verify()
@@ -81,9 +148,9 @@ class App:
       print: "flOW: boot aborted (unsatisfied dependencies)."
       return: 0
     set j int: 0
-    while: j < this.mcount
-      set m2: this.modules[j]
+    while: j < this.count
+      set m2: this.mods[j]
       call: m2.start(this)
       set j: j + 1
-    print: "flOW: booted " + this.mcount + " module(s)."
+    print: "flOW: booted " + this.count + " module(s)."
     return: 1
