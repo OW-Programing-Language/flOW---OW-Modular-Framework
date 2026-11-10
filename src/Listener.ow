@@ -1,0 +1,5 @@
+# flOW — event listener contract.
+# Implement this on any object that should react to published events.
+# `type` is the event name (e.g. "order.placed"); `payload` is any value.
+interface Listener:
+  fn on_event(type, payload)

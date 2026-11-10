@@ -1,0 +1,12 @@
+# OW auto-persisted database
+ow-data.json
+
+# Build / tooling artifacts
+*.class
+target/
+dist/
+
+# Editor / IDE
+.idea/
+.vscode/
+.DS_Store

@@ -1,0 +1,89 @@
+import "Registry.ow"
+import "EventBus.ow"
+
+# flOW — the application context.
+#
+# Holds the registered modules, a service Registry and an EventBus. Booting runs
+# three phases, mirroring a Spring-Modulith-style modular monolith:
+#   1. register — every module wires itself (provides services, subscribes)
+#   2. verify   — declared module dependencies must all be satisfied
+#   3. start    — every module runs its logic
+#
+# Modules never reference each other directly: they share named services and
+# communicate through published events.
+class App:
+  field registry
+  field bus
+  field modules
+  field mcount
+
+  fn new():
+    set this.registry: new Registry()
+    set this.bus: new EventBus()
+    set this.modules: array(64, 0)
+    set this.mcount: 0
+
+  # Register a module (fluent-ish: call once per module before boot()).
+  fn use(m):
+    set ms: this.modules
+    set ms[this.mcount]: m
+    set this.mcount: this.mcount + 1
+    return: 0
+
+  # ---- service container ----
+  fn provide(name, val):
+    call: this.registry.put(name, val)
+    return: 0
+
+  fn service(name):
+    return: this.registry.get(name)
+
+  fn has_service(name):
+    return: this.registry.has(name)
+
+  # ---- event bus ----
+  fn on(listener):
+    call: this.bus.subscribe(listener)
+    return: 0
+
+  fn emit(type, payload):
+    call: this.bus.publish(type, payload)
+    return: 0
+
+  # ---- lifecycle ----
+  # Check every module's declared dependencies are provided. Returns 1 if ok.
+  fn verify():
+    set i int: 0
+    set ok int: 1
+    while: i < this.mcount
+      set m: this.modules[i]
+      set reqs: m.requires()
+      set rn int: len(reqs)
+      set r int: 0
+      while: r < rn
+        set need: reqs[r]
+        if: this.registry.has(need) == 0
+          print: "flOW: module '" + m.name() + "' needs missing service '" + need + "'"
+          set ok: 0
+        set r: r + 1
+      set i: i + 1
+    return: ok
+
+  # Boot the application: register -> verify -> start.
+  fn boot():
+    set i int: 0
+    while: i < this.mcount
+      set m: this.modules[i]
+      call: m.register(this)
+      set i: i + 1
+    set ok int: this.verify()
+    if: ok == 0
+      print: "flOW: boot aborted (unsatisfied dependencies)."
+      return: 0
+    set j int: 0
+    while: j < this.mcount
+      set m2: this.modules[j]
+      call: m2.start(this)
+      set j: j + 1
+    print: "flOW: booted " + this.mcount + " module(s)."
+    return: 1

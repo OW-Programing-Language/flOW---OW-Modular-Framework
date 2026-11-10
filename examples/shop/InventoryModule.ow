@@ -1,0 +1,32 @@
+# Inventory module: owns stock. Provides itself as the "inventory" service and
+# reacts to "order.placed" events by decrementing stock. It never knows who
+# placed the order — that is the point of the event bus.
+class InventoryModule:
+  field stock
+
+  fn new():
+    set this.stock: 10
+
+  fn name():
+    return: "inventory"
+
+  fn requires():
+    return: array(0, 0)
+
+  fn register(app):
+    call: app.provide("inventory", this)
+    call: app.on(this)
+    return: 0
+
+  fn start(app):
+    print: "[inventory] ready with " + this.stock + " items"
+    return: 0
+
+  fn on_event(type, payload):
+    if: type == "order.placed"
+      set this.stock: this.stock - payload
+      print: "[inventory] -" + payload + " -> " + this.stock + " left"
+    return: 0
+
+  fn level():
+    return: this.stock

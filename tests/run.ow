@@ -1,0 +1,60 @@
+import "../src/App.ow"
+
+# Minimal test harness: each check prints PASS/FAIL.
+#   Run:  ow run tests/run.ow
+
+# A listener that counts the events it receives.
+class Counter:
+  field n
+  fn new():
+    set this.n: 0
+  fn on_event(type, payload):
+    set this.n: this.n + 1
+    return: 0
+  fn count():
+    return: this.n
+
+# A module that depends on a service nobody provides (to test verify()).
+class BadModule:
+  fn new():
+    return: 0
+  fn name():
+    return: "bad"
+  fn requires():
+    return: ["nope"]
+  fn register(app):
+    return: 0
+  fn start(app):
+    return: 0
+
+fn check(label, cond):
+  if: cond
+    print: "PASS " + label
+  else:
+    print: "FAIL " + label
+  return: 0
+
+main:
+  # ---- service registry ----
+  set app: new App()
+  call: app.provide("greeting", "hi")
+  call: check("registry has", app.has_service("greeting") == 1)
+  call: check("registry get", app.service("greeting") == "hi")
+  call: check("registry missing absent", app.has_service("ghost") == 0)
+  call: app.provide("greeting", "bonjour")
+  call: check("registry replace", app.service("greeting") == "bonjour")
+
+  # ---- event bus ----
+  set c: new Counter()
+  call: app.on(c)
+  call: app.emit("tick", 1)
+  call: app.emit("tick", 2)
+  call: check("bus delivered to subscriber", c.count() == 2)
+
+  # ---- dependency verification ----
+  set app2: new App()
+  call: app2.use(new BadModule())
+  set booted int: app2.boot()
+  call: check("boot aborts on missing dependency", booted == 0)
+
+  print: "done"

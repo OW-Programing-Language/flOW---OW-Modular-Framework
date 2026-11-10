@@ -1,0 +1,28 @@
+# flOW — the application event bus.
+# Modules communicate by publishing events here; interested modules subscribe as
+# listeners. This keeps modules decoupled: a publisher never references its
+# subscribers (the core idea behind a modular monolith à la Spring Modulith).
+#
+# A listener is any object with `fn on_event(type, payload)`.
+class EventBus:
+  field listeners
+  field count
+
+  fn new():
+    set this.listeners: array(64, 0)
+    set this.count: 0
+
+  fn subscribe(listener):
+    set ls: this.listeners
+    set ls[this.count]: listener
+    set this.count: this.count + 1
+    return: 0
+
+  # Deliver an event to every subscriber, in subscription order.
+  fn publish(type, payload):
+    set i int: 0
+    while: i < this.count
+      set l: this.listeners[i]
+      call: l.on_event(type, payload)
+      set i: i + 1
+    return: 0

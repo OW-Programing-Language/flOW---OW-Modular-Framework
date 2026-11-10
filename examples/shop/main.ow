@@ -1,0 +1,19 @@
+import "../../src/App.ow"
+import "InventoryModule.ow"
+import "NotifyModule.ow"
+import "OrdersModule.ow"
+
+# A tiny modular monolith built with flOW.
+#
+#   Run:  ow run examples/shop/main.ow
+#
+# Three independent modules are composed by the App. Orders publishes events;
+# Inventory and Notify react — none of them reference each other directly.
+main:
+  set app: new App()
+  call: app.use(new InventoryModule())
+  call: app.use(new NotifyModule())
+  call: app.use(new OrdersModule())
+  call: app.boot()
+  set inv: app.service("inventory")
+  print: "final stock: " + inv.level()
