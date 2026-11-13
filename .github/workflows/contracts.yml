@@ -66,6 +66,7 @@ jobs:
           java -jar ow-lang/target/OwIDE.jar run examples/native_modular_shop/main.ow
       - name: Native lifecycle plus end-to-end shop
         run: |
+          set -euo pipefail
           java -jar ow-lang/target/OwIDE.jar run examples/flow2_shop/main.ow | tee /tmp/flow2-shop.log
           java -jar ow-lang/target/OwIDE.jar run tests/flow2_rollback.ow | tee /tmp/flow2-rollback.log
           java -jar ow-lang/target/OwIDE.jar run tests/flow2_dependency_cycle.ow
