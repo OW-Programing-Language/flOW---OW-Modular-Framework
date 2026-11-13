@@ -1,0 +1,9 @@
+import "OrdersModule.ow"
+
+# Services resolve after boot: no premature dependency lookup in make().
+class OrdersFunctor(Functor):
+  fn new():
+    return: 0
+
+  fn make(app):
+    return: new OrdersModule()

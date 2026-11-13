@@ -1,55 +1,78 @@
 import "Registry.ow"
+import "Module.ow"
+import "Functor.ow"
 
-# flOW — the application context.
-#
-# Holds the registered modules, a service registry, a config store and the event
-# dispatch. Modules are first-class and manageable at runtime:
-#   - parameterizable: read settings via app.config_or("module.key", default)
-#   - enable / disable: a disabled module receives no events
-#   - reload: re-initialise a single module (reset its state)
-#
-# Events are delivered to every ENABLED module's on_event(type, payload), so a
-# module never references the others — it just reacts to what is published.
-#
-# Boot lifecycle: register (wire) -> verify (deps) -> start (run).
+# The application validates service contract names at boot.
+# tools/verify_contracts.py checks OW interface member signatures before run.
 class App:
   field registry
   field config
+  field service_contracts
   field mods
   field names
   field enabled
   field count
+  field requirement_services
+  field requirement_types
+  field requirement_owners
+  field requirement_count
+  field contract_errors
 
   fn new():
     set this.registry: new Registry()
     set this.config: new Registry()
+    set this.service_contracts: new Registry()
     set this.mods: array(64, 0)
     set this.names: array(64, "")
     set this.enabled: array(64, 1)
     set this.count: 0
+    set this.requirement_services: array(128, "")
+    set this.requirement_types: array(128, "")
+    set this.requirement_owners: array(128, "")
+    set this.requirement_count: 0
+    set this.contract_errors: 0
 
   fn use(m):
+    set checked Module: m
     set ms: this.mods
     set ns: this.names
     set es: this.enabled
-    set ms[this.count]: m
-    set ns[this.count]: m.name()
+    set ms[this.count]: checked
+    set ns[this.count]: checked.name()
     set es[this.count]: 1
     set this.count: this.count + 1
     return: 0
 
-  # Apply a functor: build a module from this app context (its config/services)
-  # and register it. Analogous to an OCaml functor `module Make (Deps) = ...`,
-  # a functor parameterizes a module by what it reads from the app. Returns the
-  # produced module.
   fn apply(f):
-    set m: f.make(this)
+    set checked_functor Functor: f
+    set m Module: checked_functor.make(this)
     call: this.use(m)
     return: m
 
-  # ---- service container ----
+  # Legacy name-only service registration.
   fn provide(name, val):
     call: this.registry.put(name, val)
+    return: 0
+
+  # Declare a provided service's public nominal interface.
+  fn provide_as(name, contract, val):
+    if: this.registry.has(name) == 1
+      print: "flOW: duplicate service provider '" + name + "'"
+      set this.contract_errors: this.contract_errors + 1
+      return: 0
+    call: this.registry.put(name, val)
+    call: this.service_contracts.put(name, contract)
+    return: 0
+
+  # Declare a consumer's required interface at registration.
+  fn require_as(owner, service, contract):
+    set names: this.requirement_services
+    set types: this.requirement_types
+    set owners: this.requirement_owners
+    set names[this.requirement_count]: service
+    set types[this.requirement_count]: contract
+    set owners[this.requirement_count]: owner
+    set this.requirement_count: this.requirement_count + 1
     return: 0
 
   fn service(name):
@@ -58,7 +81,6 @@ class App:
   fn has_service(name):
     return: this.registry.has(name)
 
-  # ---- config (per-module parameters, e.g. "sound.track") ----
   fn set_config(key, val):
     call: this.config.put(key, val)
     return: 0
@@ -68,7 +90,6 @@ class App:
       return: this.config.get(key)
     return: fallback
 
-  # ---- module management ----
   fn index_of(name):
     set i int: 0
     set found int: 99
@@ -100,7 +121,6 @@ class App:
     set es[idx]: 0
     return: 0
 
-  # Re-initialise one module (calls its reload hook).
   fn reload(name):
     set idx int: this.index_of(name)
     if: idx == 99
@@ -109,7 +129,6 @@ class App:
     call: m.reload(this)
     return: 0
 
-  # ---- events: delivered to every enabled module ----
   fn emit(type, payload):
     set i int: 0
     while: i < this.count
@@ -119,10 +138,13 @@ class App:
       set i: i + 1
     return: 0
 
-  # ---- lifecycle ----
   fn verify():
-    set i int: 0
     set ok int: 1
+    if: this.contract_errors > 0
+      set ok: 0
+
+    # Preserve old name-only requirements.
+    set i int: 0
     while: i < this.count
       set m: this.mods[i]
       set reqs: m.requires()
@@ -135,6 +157,32 @@ class App:
           set ok: 0
         set r: r + 1
       set i: i + 1
+
+    # Verify typed API requirements before any module is started.
+    set j int: 0
+    while: j < this.requirement_count
+      set names: this.requirement_services
+      set types: this.requirement_types
+      set owners: this.requirement_owners
+      set need: names[j]
+      set expected: types[j]
+      set consumer: owners[j]
+      if: this.index_of(consumer) == 99
+        print: "flOW: requirement declared by unregistered module '" + consumer + "'"
+        set ok: 0
+      if: this.registry.has(need) == 0
+        print: "flOW: '" + consumer + "' requires missing service '" + need + "' (" + expected + ")"
+        set ok: 0
+      else:
+        if: this.service_contracts.has(need) == 0
+          print: "flOW: service '" + need + "' has no declared contract (" + expected + " required)"
+          set ok: 0
+        else:
+          set actual: this.service_contracts.get(need)
+          if: actual != expected
+            print: "flOW: contract mismatch for '" + need + "': expected " + expected + ", got " + actual
+            set ok: 0
+      set j: j + 1
     return: ok
 
   fn boot():
@@ -145,7 +193,7 @@ class App:
       set i: i + 1
     set ok int: this.verify()
     if: ok == 0
-      print: "flOW: boot aborted (unsatisfied dependencies)."
+      print: "flOW: boot aborted (unsatisfied dependencies or contracts)."
       return: 0
     set j int: 0
     while: j < this.count

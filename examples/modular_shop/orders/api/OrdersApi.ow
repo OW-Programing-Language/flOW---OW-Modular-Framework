@@ -1,0 +1,3 @@
+interface OrdersApi:
+  fn place(quantity)
+  fn placed_count()

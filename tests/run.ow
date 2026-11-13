@@ -5,7 +5,7 @@ import "../src/App.ow"
 
 # A counter module: counts "tick" events. Parameterized by a base (config),
 # resettable via reload().
-class Counter:
+class Counter(Module):
   field n
   field base
   fn new():
@@ -35,7 +35,7 @@ class Counter:
     return: this.n
 
 # A functor that builds a Counter whose base comes from config.
-class CounterFunctor:
+class CounterFunctor(Functor):
   fn new():
     return: 0
   fn make(app):
@@ -45,7 +45,7 @@ class CounterFunctor:
     return: c
 
 # A module that depends on a service nobody provides (to test verify()).
-class BadModule:
+class BadModule(Module):
   fn new():
     return: 0
   fn name():
@@ -66,6 +66,7 @@ fn check(label, cond):
     print: "PASS " + label
   else:
     print: "FAIL " + label
+  call: assert(cond, label)
   return: 0
 
 main:

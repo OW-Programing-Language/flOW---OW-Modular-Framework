@@ -1,15 +1,4 @@
-# flOW — functor contract (inspired by OCaml functors).
-#
-# In OCaml a functor is a module parameterized by another module:
-#     module Make (Deps : S) : T = struct ... end
-# A flOW functor is an object that builds a configured Module from the App
-# context — reading the app's config and resolving services it depends on — and
-# returns a ready-to-register module instance.
-#
-#   make(app) -> Module
-#
-# Register it with `app.apply(new MyFunctor())`, which calls make(app) and uses
-# the result. This is how you parameterize a module (e.g. a starting value, a
-# chosen backend, a wrapped/decorated module) without hardcoding it.
+# flOW functor: builds a configured Module from the application context.
+# Run tools/verify_contracts.py to check its implementation's signature.
 interface Functor:
   fn make(app)

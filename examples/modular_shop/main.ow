@@ -1,0 +1,35 @@
+import "../../src/App.ow"
+import "inventory/infra/InventoryFunctor.ow"
+import "orders/infra/OrdersFunctor.ow"
+import "notifications/infra/NotificationsFunctor.ow"
+
+# Run: ow run examples/modular_shop/main.ow
+# Preflight: python3 tools/verify_contracts.py
+main:
+  set app: new App()
+  call: app.set_config("inventory.start_stock", 25)
+  call: app.set_config("notifications.prefix", "[shop]")
+
+  call: app.apply(new InventoryFunctor())
+  call: app.apply(new OrdersFunctor())
+  call: app.apply(new NotificationsFunctor())
+  call: assert(app.boot() == 1, "contract-checked app must boot")
+
+  # Public API bindings: consumers need no cross-module infra imports.
+  set orders OrdersApi: app.service("orders")
+  set inventory InventoryApi: app.service("inventory")
+  set notifications NotificationsApi: app.service("notifications")
+
+  call: assert(orders.place(3) == 1, "first order")
+  call: assert(orders.place(2) == 1, "second order")
+  call: assert(inventory.level() == 20, "stock reduced from 25 to 20")
+  call: assert(notifications.delivered_count() == 2, "notifications delivered")
+
+  call: app.disable("notifications")
+  call: assert(orders.place(4) == 1, "orders work while notify disabled")
+  call: assert(inventory.level() == 16, "stock still updates")
+  call: assert(notifications.delivered_count() == 2, "disabled subscriber silent")
+
+  call: app.reload("inventory")
+  call: assert(inventory.level() == 25, "stock reset to configured value")
+  print: "PASS: three modules, functors and interface contracts"

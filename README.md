@@ -139,3 +139,42 @@ tests/      run.ow — registry, config, events, enable/disable, reload, functor
 
 ## License
 [MIT](LICENSE).
+
+## Interface-checked modules and functors
+
+flOW now supports explicit service contracts:
+
+```ow
+class OrdersModule(Module, OrdersApi):
+  fn register(app):
+    set api OrdersApi: this
+    call: app.provide_as("orders", "OrdersApi", api)
+    call: app.require_as("orders", "inventory", "InventoryApi")
+    return: 0
+```
+
+The new `App.provide_as` / `App.require_as` APIs validate missing, duplicate,
+and mismatched service contracts **before modules start**. OW typed bindings
+check nominal interface membership; run the additional Python preflight for
+**method existence, visibility, parameter count, functor contracts, dependency
+manifests, and cross-module api/infra boundaries**:
+
+```bash
+python3 tools/verify_contracts.py
+python3 -m unittest discover -s tests -p test_contracts.py
+ow run examples/modular_shop/main.ow
+ow run tests/runtime_contracts.ow
+```
+
+See the [three-module shop](examples/modular_shop/README.md) with Inventory,
+Orders and Notifications, each in its own `api/` and `infra/` directory and
+each constructed by an independent configurable functor.
+
+**Migration:** Existing modules and factories must declare `Module` and
+`Functor` respectively when using `App.use` / `App.apply`. The original
+examples and tests were updated for this rule.
+
+**OCaml comparison:** flOW verifies named contracts at runtime and OW source
+interfaces in the preflight step. OW does **not** currently implement OCaml's
+full typed static module/functor system, argument/return type checking or
+generative functors. These checks become mandatory for CI via the workflow.

@@ -1,6 +1,6 @@
 # Notify module: reacts to orders by sending a (printed) notification. Fully
 # decoupled; can be disabled at runtime (app.disable("notify")) to go silent.
-class NotifyModule:
+class NotifyModule(Module):
   fn new():
     return: 0
 

@@ -3,7 +3,7 @@ import "InventoryModule.ow"
 # A flOW functor (OCaml-style): builds an InventoryModule parameterized by the
 # "inventory.stock" config value (default 10). Register it with
 # `app.apply(new InventoryFunctor())` — the app context is the functor's argument.
-class InventoryFunctor:
+class InventoryFunctor(Functor):
   fn new():
     return: 0
 

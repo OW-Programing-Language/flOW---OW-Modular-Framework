@@ -1,0 +1,12 @@
+import "InventoryModule.ow"
+
+# A runtime functor parameterizes Inventory using app configuration.
+class InventoryFunctor(Functor):
+  fn new():
+    return: 0
+
+  fn make(app):
+    set starting int: app.config_or("inventory.start_stock", 25)
+    set m: new InventoryModule()
+    call: m.set_stock(starting)
+    return: m
