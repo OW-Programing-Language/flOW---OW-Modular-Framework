@@ -1,5 +1,5 @@
 # Warehouse keeps SKU's integer representation private.
-module Warehouse: INVENTORY
+module Shop.Warehouse: INVENTORY
   type sku: int
   fn name() -> string:
     return: "inventory"

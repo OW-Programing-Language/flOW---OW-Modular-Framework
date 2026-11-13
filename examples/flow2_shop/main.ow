@@ -7,7 +7,7 @@ import "notifications/api/NotificationsApi.ow"
 import "notifications/infra/MakeNotifications.ow"
 
 # Transparent module aliases retain Warehouse's opaque SKU identity.
-module Inventory = Warehouse
+module Inventory = Shop.Warehouse
 module Shop.Inventory = Inventory
 
 # A real OW module type + two native functors + one flOW event/lifecycle context.
@@ -25,7 +25,7 @@ main:
   set liveOrders ORDERS: app.service("orders")
   set liveNotifications NOTIFICATIONS: app.service("notifications")
   call: assert(inventory.available(inventory.issue(3)) == 1, "typed inventory service")
-  call: assert(Warehouse.available(Shop.Inventory.issue(3)) == 1, "alias shares native type identity")
+  call: assert(Shop.Warehouse.available(Shop.Inventory.issue(3)) == 1, "alias shares native type identity")
   call: assert(liveOrders.place(5) == 1, "native Orders functor")
   call: assert(liveOrders.place(90) == 0, "invalid order rejected")
   call: assert(liveNotifications.status(7) == "accepted", "native Notifications functor")
