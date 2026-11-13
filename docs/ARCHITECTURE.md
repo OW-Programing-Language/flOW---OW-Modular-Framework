@@ -45,7 +45,8 @@ value as an OW native object.
 | `api/infra` import boundaries | Checked by OW loader | Uses conventions |
 | Signature `include` composition | Yes (OW PR #29) | Reuses NATIVE_LIFECYCLE in domain APIs |
 | Transparent module aliases and dotted namespace aliases | Yes (OW PR #30) | Used in flow2_shop |
-| Full lexical nested module implementations | Not yet | **Needs further OW language work** |
+| Qualified native module definitions (e.g. Shop.Warehouse) | Yes (OW PR #31) | Used in flow2_shop |
+| Full lexical nested module scopes and implementation include | Not yet | **Needs further OW language work** |
 | Full static OCaml type inference | No | Not claimed |
 | Lifecycle stop/restart/rollback, events | Not OCaml language constructs | Yes |
 | Full LLVM native codegen for module values | No | Interpreter only |

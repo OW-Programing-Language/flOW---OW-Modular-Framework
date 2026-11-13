@@ -1,0 +1,10 @@
+module_type API:
+  fn get() -> int
+module Shop: API
+  fn get() -> int:
+    return: 1
+module Shop.Inventory: API
+  fn get() -> int:
+    return: 2
+main:
+  print: "ERROR: conflicting namespace accepted"

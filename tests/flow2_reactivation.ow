@@ -6,6 +6,9 @@ import "../examples/flow2_shop/orders/infra/MakeOrders.ow"
 import "../examples/flow2_shop/notifications/api/NotificationsApi.ow"
 import "../examples/flow2_shop/notifications/infra/MakeNotifications.ow"
 
+# Backward-compatible local alias for the now-qualified Warehouse module.
+module Warehouse = Shop.Warehouse
+
 main:
   set orders ORDERS: MakeOrders(Warehouse)
   set notifications NOTIFICATIONS: MakeNotifications(orders)

@@ -19,7 +19,9 @@ flow2_shop/
 
 ## Why this is different from the old flOW example
 
-`module Inventory = Warehouse` and `module Shop.Inventory = Inventory`
+`module Shop.Warehouse: INVENTORY` is a **real qualified native OW module
+definition**, not a rename. `module Inventory = Shop.Warehouse` and
+`module Shop.Inventory = Inventory`
 are true OW aliases preserving Warehouse's opaque SKU identity. The application
 passes `Shop.Inventory` to `MakeOrders` and registers `Inventory` with flOW,
 but both still refer to the exact same typed module value.

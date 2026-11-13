@@ -108,9 +108,9 @@ The `tools/verify_contracts.py` script remains for **legacy class-based
 `contracts.json` validation**, not for native module syntax. CI uses the
 real `ow check` tool for native functors and tests negative cases.
 
-CI is pinned to a tested `ow-lang` revision containing PRs #15–#30,
-including reusable `module_type include` signatures and transparent
-`module Alias = Original` / `Shop.Inventory` native aliases.
+CI is pinned to a tested `ow-lang` revision containing PRs #15–#31,
+including reusable signature `include`, transparent module aliases,
+and qualified native module implementations such as `module Shop.Warehouse: INVENTORY`.
 See [architecture and OCaml feature comparison](docs/ARCHITECTURE.md).
 
 ## Legacy examples

@@ -7,7 +7,7 @@ import "notifications/api/NotificationsApi.ow"
 import "notifications/infra/MakeNotifications.ow"
 
 # Transparent module aliases retain Warehouse's opaque SKU identity.
-module Inventory = Warehouse
+module Inventory = Shop.Warehouse
 module Shop.Inventory = Inventory
 
 # A real OW module type + two native functors + one flOW event/lifecycle context.
