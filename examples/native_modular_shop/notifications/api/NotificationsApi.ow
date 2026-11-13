@@ -1,0 +1,2 @@
+module_type NOTIFICATIONS:
+  fn status(quantity int) -> string

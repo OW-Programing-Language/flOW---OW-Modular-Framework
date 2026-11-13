@@ -1,0 +1,10 @@
+# Private implementation; callers cannot see that sku is an int.
+module Warehouse: INVENTORY
+  type sku: int
+  fn issue(value int) -> sku:
+    return: value
+  fn check(value sku) -> int:
+    if: value > 0
+      if: value < 50
+        return: 1
+    return: 0

@@ -1,0 +1,17 @@
+import "inventory/api/InventoryApi.ow"
+import "inventory/infra/Warehouse.ow"
+import "orders/api/OrdersApi.ow"
+import "orders/infra/MakeOrders.ow"
+import "notifications/api/NotificationsApi.ow"
+import "notifications/infra/MakeNotifications.ow"
+
+# Composition root; only the root directly imports other modules' infra.
+main:
+  set orders ORDERS: MakeOrders(Warehouse)
+  set notifications NOTIFICATIONS: MakeNotifications(Warehouse)
+
+  call: assert(orders.place(5) == 1, "first order accepted")
+  call: assert(orders.place(60) == 0, "large order rejected")
+  call: assert(notifications.status(10) == "accepted", "valid notification")
+  call: assert(notifications.status(0) == "rejected", "invalid notification")
+  print: "PASS native OW modules + typed functors + abstract SKU"
