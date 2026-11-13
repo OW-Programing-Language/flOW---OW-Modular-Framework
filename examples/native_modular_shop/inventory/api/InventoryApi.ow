@@ -1,0 +1,5 @@
+# Public API; the concrete stock key is abstract to all consumers.
+module_type INVENTORY:
+  type sku
+  fn issue(value int) -> sku
+  fn check(value sku) -> int

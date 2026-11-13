@@ -1,0 +1,2 @@
+module_type ORDERS:
+  fn place(quantity int) -> int

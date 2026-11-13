@@ -1,0 +1,4 @@
+# Native OW functor: a module conforming to INVENTORY is the parameter.
+functor MakeOrders(Stock: INVENTORY) -> ORDERS:
+  fn place(quantity int) -> int:
+    return: Stock.check(Stock.issue(quantity))

@@ -19,6 +19,7 @@ jobs:
         with:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
+          ref: d2f1293662b4dd8fe8c1fa9efd0a00c841e2fc68
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -41,6 +42,7 @@ jobs:
           java -jar ow-lang/target/OwIDE.jar run examples/shop/main.ow
           java -jar ow-lang/target/OwIDE.jar run examples/modular_shop/main.ow
           java -jar ow-lang/target/OwIDE.jar run examples/modular_shop/alternate.ow
+          java -jar ow-lang/target/OwIDE.jar run examples/native_modular_shop/main.ow
       - name: Reject an invalid functor parameter
         run: |
           if java -jar ow-lang/target/OwIDE.jar run tests/invalid_functor_argument.ow; then

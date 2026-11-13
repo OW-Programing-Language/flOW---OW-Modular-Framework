@@ -216,3 +216,15 @@ module-language semantics: full type inference, `with type` sharing constraints,
 abstract type sealing, higher-order functor types, or applicative/generative
 type identities. The API is a practical step towards those capabilities, not
 feature parity with OCaml.
+
+## Native OW module/functor showcase
+
+For **real module-parameterized functors** (not just `make(app)` factories),
+see [examples/native_modular_shop](examples/native_modular_shop). It contains
+three Spring-Modulith-style business domains with `api/` and `infra/`
+folders, an opaque Inventory SKU, and two OW-native functors applied to the
+Inventory module. This example runs using the compiler features merged into
+`ow-lang` through issue #16 and is tested in CI.
+
+The runtime `App` API and native OW module calculus are distinct composition
+models; the example documents that boundary explicitly.

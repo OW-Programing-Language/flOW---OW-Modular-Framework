@@ -1,0 +1,5 @@
+functor MakeNotifications(Stock: INVENTORY) -> NOTIFICATIONS:
+  fn status(quantity int) -> string:
+    if: Stock.check(Stock.issue(quantity)) == 1
+      return: "accepted"
+    return: "rejected"
