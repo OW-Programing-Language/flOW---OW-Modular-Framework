@@ -19,6 +19,11 @@ flow2_shop/
 
 ## Why this is different from the old flOW example
 
+`module Inventory = Warehouse` and `module Shop.Inventory = Inventory`
+are true OW aliases preserving Warehouse's opaque SKU identity. The application
+passes `Shop.Inventory` to `MakeOrders` and registers `Inventory` with flOW,
+but both still refer to the exact same typed module value.
+
 `module_type INVENTORY`, `ORDERS` and `NOTIFICATIONS` each use
 `include NATIVE_LIFECYCLE` to reuse the lifecycle signature instead of
 repeating seven method declarations. The compiler expands included public

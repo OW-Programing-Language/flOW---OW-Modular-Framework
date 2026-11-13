@@ -21,9 +21,9 @@ jobs:
         with:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
-          # Includes PR #29: signature include + OW module/functor checks.
+          # Includes PRs #29–#30: signature include, transparent alias paths and typed modules.
           # Pin the exact tested commit for reproducibility; update intentionally.
-          ref: d441d06e7ee59fea64ab0066a9782b8df2b03f9c
+          ref: 1e62c9b04e9fbb7cd126b80250b7ce05f242a5f1
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -44,11 +44,12 @@ jobs:
           java -jar ow-lang/target/OwIDE.jar check examples/native_modular_shop/main.ow
           java -jar ow-lang/target/OwIDE.jar check examples/flow2_shop/main.ow
           java -jar ow-lang/target/OwIDE.jar check ow-lang/examples/module_calculus/signature_include.ow
+          java -jar ow-lang/target/OwIDE.jar check ow-lang/examples/module_calculus/module_aliases.ow
           java -jar ow-lang/target/OwIDE.jar check tests/flow2_rollback.ow
           java -jar ow-lang/target/OwIDE.jar check tests/flow2_dependency_cycle.ow
       - name: Reject an invalid native functor at compile time
         run: |
-          for file in tests/flow2_invalid_native_functor.ow tests/flow2_missing_included_lifecycle.ow tests/flow2_conflicting_included_signature.ow; do
+          for file in tests/flow2_invalid_native_functor.ow tests/flow2_missing_included_lifecycle.ow tests/flow2_conflicting_included_signature.ow tests/flow2_invalid_alias_target.ow tests/flow2_alias_cycle.ow; do
             if java -jar ow-lang/target/OwIDE.jar check "$file"; then
               echo "ERROR: invalid native signature passed ow check: $file"
               exit 1

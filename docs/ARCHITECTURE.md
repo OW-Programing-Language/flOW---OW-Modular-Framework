@@ -44,7 +44,8 @@ value as an OW native object.
 | `ow check` semantic preflight | Yes | CI executes it |
 | `api/infra` import boundaries | Checked by OW loader | Uses conventions |
 | Signature `include` composition | Yes (OW PR #29) | Reuses NATIVE_LIFECYCLE in domain APIs |
-| Nested modules and module aliases | Not fully implemented | **Needs further OW language work** |
+| Transparent module aliases and dotted namespace aliases | Yes (OW PR #30) | Used in flow2_shop |
+| Full lexical nested module implementations | Not yet | **Needs further OW language work** |
 | Full static OCaml type inference | No | Not claimed |
 | Lifecycle stop/restart/rollback, events | Not OCaml language constructs | Yes |
 | Full LLVM native codegen for module values | No | Interpreter only |
@@ -68,7 +69,7 @@ value as an OW native object.
 ## Next OW language evolution
 
 To match more of OCaml, add `include` for implementations,
-named module aliases, nested module paths/signatures, module first-class
+lexically nested module implementations/signatures, module first-class
 packing/unpacking and more complete type-equality inference to
 `OW-Programing-Language/ow-lang`, with compiler tests. flOW can adopt
 those capabilities when they exist, but cannot enforce their semantics
