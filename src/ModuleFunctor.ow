@@ -1,0 +1,7 @@
+# A real module-parameterized functor protocol.
+# make(dependency) receives another module's public API, not the App registry.
+# Implementations bind the dependency to its declared OW interface type and
+# check their result against an output interface before returning.
+# The verifier also enforces the corresponding contract in contracts.json.
+interface ModuleFunctor:
+  fn make(dependency)

@@ -1,9 +1,13 @@
 import "OrdersModule.ow"
+import "../../inventory/api/InventoryApi.ow"
 
-# Services resolve after boot: no premature dependency lookup in make().
-class OrdersFunctor(Functor):
+# Module application: InventoryApi -> OrdersModule.
+# The same functor works with any implementation of InventoryApi.
+class OrdersFunctor(ModuleFunctor):
   fn new():
     return: 0
 
-  fn make(app):
-    return: new OrdersModule()
+  fn make(inventory):
+    set dependency InventoryApi: inventory
+    set result OrdersApi: new OrdersModule(dependency)
+    return: result

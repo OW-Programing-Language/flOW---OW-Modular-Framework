@@ -1,0 +1,11 @@
+import "../src/App.ow"
+import "../examples/modular_shop/orders/infra/OrdersFunctor.ow"
+import "../examples/modular_shop/notifications/infra/NotificationsModule.ow"
+
+# This program MUST fail at the typed argument binding inside OrdersFunctor.
+main:
+  set app: new App()
+  set wrong: new NotificationsModule()
+  set functor: new OrdersFunctor()
+  call: app.apply_to(functor, wrong)
+  print: "FAIL: an incorrect functor argument was accepted"

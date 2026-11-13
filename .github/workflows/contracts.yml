@@ -25,7 +25,7 @@ jobs:
       - name: Validate interfaces, functors, and module boundaries
         run: |
           python3 tools/verify_contracts.py
-          python3 -m unittest discover -s tests -p test_contracts.py
+          python3 -m unittest discover -s tests -p 'test_*.py'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -40,3 +40,10 @@ jobs:
           java -jar ow-lang/target/OwIDE.jar run tests/runtime_contracts.ow
           java -jar ow-lang/target/OwIDE.jar run examples/shop/main.ow
           java -jar ow-lang/target/OwIDE.jar run examples/modular_shop/main.ow
+          java -jar ow-lang/target/OwIDE.jar run examples/modular_shop/alternate.ow
+      - name: Reject an invalid functor parameter
+        run: |
+          if java -jar ow-lang/target/OwIDE.jar run tests/invalid_functor_argument.ow; then
+            echo "ERROR: OrdersFunctor accepted a NotificationsModule as InventoryApi"
+            exit 1
+          fi
