@@ -1,0 +1,46 @@
+import "../src/App.ow"
+
+module Good: NATIVE_LIFECYCLE
+  fn name() -> string:
+    return: "good"
+  fn requires() -> array:
+    return: []
+  fn register() -> int:
+    return: 0
+  fn start() -> int:
+    print: "START good"
+    return: 0
+  fn stop() -> int:
+    print: "STOP good"
+    return: 0
+  fn reload() -> int:
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    return: 0
+
+module Failing: NATIVE_LIFECYCLE
+  fn name() -> string:
+    return: "failing"
+  fn requires() -> array:
+    return: ["good"]
+  fn register() -> int:
+    return: 0
+  fn start() -> int:
+    print: "FAIL failing"
+    return: 0 - 1
+  fn stop() -> int:
+    print: "ERROR: failing never started and must not be stopped"
+    return: 0
+  fn reload() -> int:
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    return: 0
+
+main:
+  set app: new App()
+  call: app.use_native(Failing)
+  call: app.use_native(Good)
+  call: assert(app.boot() == 0, "negative start result aborts boot")
+  call: assert(app.start_count == 0, "rollback stops earlier modules")
+  call: assert(app.booted == 0, "boot not marked successful")
+  print: "PASS lifecycle rollback"

@@ -1,0 +1,12 @@
+import "../src/App.ow"
+
+module_type NOT_LIFECYCLE:
+  fn name() -> string
+module Broken: NOT_LIFECYCLE
+  fn name() -> string:
+    return: "broken"
+
+main:
+  set app: new App()
+  call: app.use_native(Broken)
+  print: "ERROR: accepted native module without lifecycle contract"

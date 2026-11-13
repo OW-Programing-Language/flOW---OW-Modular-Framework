@@ -1,4 +1,4 @@
-name: flOW contracts and OW integration
+name: flOW v2 — native OW modules, lifecycle and contract regression
 
 on:
   push:
@@ -7,6 +7,8 @@ on:
       - 'examples/**'
       - 'tests/**'
       - 'tools/**'
+      - 'docs/**'
+      - 'README.md'
       - '.github/workflows/contracts.yml'
   pull_request:
 
@@ -19,11 +21,13 @@ jobs:
         with:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
-          ref: d2f1293662b4dd8fe8c1fa9efd0a00c841e2fc68
+          # Includes all module/functor features and `ow check` through PR #28.
+          # Pin the exact tested commit for reproducibility; update intentionally.
+          ref: 2e704ef843e0cac555280f0bc282845467fee117
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Validate interfaces, functors, and module boundaries
+      - name: Verify legacy flOW manifest contracts
         run: |
           python3 tools/verify_contracts.py
           python3 -m unittest discover -s tests -p 'test_*.py'
@@ -33,9 +37,21 @@ jobs:
           java-version: '17'
           cache: maven
           cache-dependency-path: ow-lang/pom.xml
-      - name: Build OW interpreter
-        run: mvn -q -f ow-lang/pom.xml -DskipTests package
-      - name: Run OW examples and runtime tests
+      - name: Build and test current OW compiler
+        run: mvn -q -f ow-lang/pom.xml package
+      - name: Statically check native functor applications (no execution)
+        run: |
+          java -jar ow-lang/target/OwIDE.jar check examples/native_modular_shop/main.ow
+          java -jar ow-lang/target/OwIDE.jar check examples/flow2_shop/main.ow
+          java -jar ow-lang/target/OwIDE.jar check tests/flow2_rollback.ow
+          java -jar ow-lang/target/OwIDE.jar check tests/flow2_dependency_cycle.ow
+      - name: Reject an invalid native functor at compile time
+        run: |
+          if java -jar ow-lang/target/OwIDE.jar check tests/flow2_invalid_native_functor.ow; then
+            echo "ERROR: invalid functor input passed ow check"
+            exit 1
+          fi
+      - name: Run original flOW compatibility suite
         run: |
           java -jar ow-lang/target/OwIDE.jar run tests/run.ow
           java -jar ow-lang/target/OwIDE.jar run tests/runtime_contracts.ow
@@ -43,9 +59,18 @@ jobs:
           java -jar ow-lang/target/OwIDE.jar run examples/modular_shop/main.ow
           java -jar ow-lang/target/OwIDE.jar run examples/modular_shop/alternate.ow
           java -jar ow-lang/target/OwIDE.jar run examples/native_modular_shop/main.ow
-      - name: Reject an invalid functor parameter
+      - name: Native lifecycle plus end-to-end shop
         run: |
-          if java -jar ow-lang/target/OwIDE.jar run tests/invalid_functor_argument.ow; then
-            echo "ERROR: OrdersFunctor accepted a NotificationsModule as InventoryApi"
-            exit 1
-          fi
+          java -jar ow-lang/target/OwIDE.jar run examples/flow2_shop/main.ow | tee /tmp/flow2-shop.log
+          java -jar ow-lang/target/OwIDE.jar run tests/flow2_rollback.ow | tee /tmp/flow2-rollback.log
+          java -jar ow-lang/target/OwIDE.jar run tests/flow2_dependency_cycle.ow
+          java -jar ow-lang/target/OwIDE.jar run tests/flow2_reactivation.ow > /tmp/flow2-reactivation.log
+          python3 tools/check_flow2_output.py /tmp/flow2-shop.log /tmp/flow2-rollback.log /tmp/flow2-reactivation.log
+      - name: Reject invalid native bindings, duplicates, and capacity overflow
+        run: |
+          for file in tests/invalid_functor_argument.ow tests/flow2_invalid_native_lifecycle.ow tests/flow2_duplicate_modules.ow tests/flow2_capacity_overflow.ow; do
+            if java -jar ow-lang/target/OwIDE.jar run "$file"; then
+              echo "ERROR: expected rejection: $file"
+              exit 1
+            fi
+          done

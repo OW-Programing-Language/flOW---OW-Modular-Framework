@@ -1,0 +1,24 @@
+import "../src/App.ow"
+import "../examples/flow2_shop/inventory/api/InventoryApi.ow"
+import "../examples/flow2_shop/inventory/infra/Warehouse.ow"
+import "../examples/flow2_shop/orders/api/OrdersApi.ow"
+import "../examples/flow2_shop/orders/infra/MakeOrders.ow"
+import "../examples/flow2_shop/notifications/api/NotificationsApi.ow"
+import "../examples/flow2_shop/notifications/infra/MakeNotifications.ow"
+
+main:
+  set orders ORDERS: MakeOrders(Warehouse)
+  set notifications NOTIFICATIONS: MakeNotifications(orders)
+  set app: new App()
+  call: app.use_native(Warehouse)
+  call: app.use_native(orders)
+  call: app.use_native(notifications)
+  call: assert(app.boot() == 1, "boot")
+  set i int: 0
+  while: i < 70
+    call: assert(app.disable("notifications") == 1, "stop subscriber")
+    call: assert(app.enable("notifications") == 1, "restart subscriber")
+    set i: i + 1
+  call: assert(app.start_count == 3, "startup order remains bounded")
+  call: assert(app.stop() == 1, "shutdown")
+  print: "PASS flOW 70 native restart cycles"

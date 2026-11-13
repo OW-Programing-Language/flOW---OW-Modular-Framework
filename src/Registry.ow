@@ -33,6 +33,7 @@ class Registry:
         set done: 1
       set i: i + 1
     if: done == 0
+      call: assert(this.count < len(ks), "flOW: registry capacity reached")
       set ks[this.count]: name
       set vs[this.count]: val
       set this.count: this.count + 1

@@ -1,0 +1,10 @@
+# Notifications is built by a second native functor receiving ORDERS.
+module_type NOTIFICATIONS:
+  fn name() -> string
+  fn requires() -> array
+  fn register() -> int
+  fn start() -> int
+  fn stop() -> int
+  fn reload() -> int
+  fn on_event(type string, payload int) -> int
+  fn status(quantity int) -> string

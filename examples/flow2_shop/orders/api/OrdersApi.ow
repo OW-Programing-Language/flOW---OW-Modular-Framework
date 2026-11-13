@@ -1,0 +1,10 @@
+# Orders is built by a native functor receiving INVENTORY.
+module_type ORDERS:
+  fn name() -> string
+  fn requires() -> array
+  fn register() -> int
+  fn start() -> int
+  fn stop() -> int
+  fn reload() -> int
+  fn on_event(type string, payload int) -> int
+  fn place(quantity int) -> int

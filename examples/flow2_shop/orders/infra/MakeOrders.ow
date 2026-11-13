@@ -1,0 +1,22 @@
+# Strongly typed functor: the Order module cannot access Warehouse internals.
+functor MakeOrders(Stock: INVENTORY) -> ORDERS:
+  fn name() -> string:
+    return: "orders"
+  fn requires() -> array:
+    return: ["inventory"]
+  fn register() -> int:
+    print: "REGISTER orders"
+    return: 0
+  fn start() -> int:
+    print: "START orders"
+    return: 0
+  fn stop() -> int:
+    print: "STOP orders"
+    return: 0
+  fn reload() -> int:
+    print: "RELOAD orders"
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    return: 0
+  fn place(quantity int) -> int:
+    return: Stock.available(Stock.issue(quantity))

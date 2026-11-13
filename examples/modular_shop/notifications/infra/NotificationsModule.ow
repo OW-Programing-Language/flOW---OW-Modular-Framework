@@ -32,6 +32,9 @@ class NotificationsModule(Module, NotificationsApi):
       print: this.prefix + " order confirmed: " + payload
     return: 0
 
+  fn stop(app):
+    return: 0
+
   fn reload(app):
     set this.delivered: 0
     return: 0

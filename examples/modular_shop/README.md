@@ -45,15 +45,15 @@ Assertions verify service wiring, isolation, events, and reload.
 
 ## What is and is not checked
 
-**Static preflight** uses tools/verify_contracts.py to verify public interface
+**Legacy static preflight** uses tools/verify_contracts.py to verify public interface
 method names, arity, visibility, functors, dependencies, and api/infra boundaries.
 **Boot-time validation** rejects missing providers, mismatched contract names,
 and duplicate service providers. OW typed variable bindings enforce nominal
 interface membership, not method completeness.
 
 Unlike OCaml's module signatures and compile-time functors, flOW's functors
-are currently runtime factories parameterized by an App context. OW interfaces
-do not yet declare parameter or return types; no full static OCaml module type
-system is claimed. Always run the preflight verifier in CI before execution.
+are currently runtime factories parameterized by an App context. OW's current compiler also supports typed method signatures and native module
+contracts, but this example intentionally uses legacy class-based factories.
+Use the Python preflight verifier only for the legacy contracts.json manifest.
 
 The [alternate.ow](alternate.ow) variant reuses **the same OrdersFunctor**\nwith a second InventoryApi implementation. The negative test\n`tests/invalid_functor_argument.ow` proves a module without InventoryApi is\nrejected at runtime.\n

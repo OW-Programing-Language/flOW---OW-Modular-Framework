@@ -28,6 +28,6 @@ calculus; it does not pretend the native functor is already an `App.Module`
 instance. A future integration can bridge those two models explicitly.
 
 The native module language supports checked signatures, opaque type members,
-applicative/generative identities, and explicit manifest sharing; it does not
-yet provide OCaml's full higher-order/type-dependent functors or `with type`
-path sharing.
+applicative/generative identities, and explicit manifest sharing; the OW language has since gained partial higher-order and type-dependent
+functors and `with_type` sharing. This older example does not use those features.
+For full flOW runtime integration see [flow2_shop](../flow2_shop/README.md).

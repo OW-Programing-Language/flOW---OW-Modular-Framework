@@ -15,6 +15,9 @@ class ContractProvider(Module):
     return: 0
   fn on_event(type, payload):
     return: 0
+  fn stop(app):
+    return: 0
+
   fn reload(app):
     return: 0
 
@@ -33,6 +36,9 @@ class ContractConsumer(Module):
     return: 0
   fn on_event(type, payload):
     return: 0
+  fn stop(app):
+    return: 0
+
   fn reload(app):
     return: 0
 
@@ -50,6 +56,9 @@ class DuplicateProvider(Module):
     return: 0
   fn on_event(type, payload):
     return: 0
+  fn stop(app):
+    return: 0
+
   fn reload(app):
     return: 0
 

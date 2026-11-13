@@ -1,0 +1,43 @@
+import "../src/App.ow"
+
+module A: NATIVE_LIFECYCLE
+  fn name() -> string:
+    return: "a"
+  fn requires() -> array:
+    return: ["b"]
+  fn register() -> int:
+    return: 0
+  fn start() -> int:
+    print: "ERROR: cycle A started"
+    return: 0
+  fn stop() -> int:
+    return: 0
+  fn reload() -> int:
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    return: 0
+
+module B: NATIVE_LIFECYCLE
+  fn name() -> string:
+    return: "b"
+  fn requires() -> array:
+    return: ["a"]
+  fn register() -> int:
+    return: 0
+  fn start() -> int:
+    print: "ERROR: cycle B started"
+    return: 0
+  fn stop() -> int:
+    return: 0
+  fn reload() -> int:
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    return: 0
+
+main:
+  set app: new App()
+  call: app.use_native(B)
+  call: app.use_native(A)
+  call: assert(app.boot() == 0, "cyclic startup must fail")
+  call: assert(app.start_count == 0, "no module started")
+  print: "PASS lifecycle cycle detection"
