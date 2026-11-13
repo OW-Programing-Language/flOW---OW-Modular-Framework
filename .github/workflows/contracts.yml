@@ -21,9 +21,10 @@ jobs:
         with:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
-          # Includes PRs #29–#31: signature include, module aliases and qualified implementations.
+          # Includes PRs #29–#35: native modules, first-class packages,
+          # implementation include, static LLVM and sealed lexical nesting.
           # Pin the exact tested commit for reproducibility; update intentionally.
-          ref: 2bfe13ecec50bbe10350871667639d659259cfc4
+          ref: e5eb3a10600ffa27ceb4f5c8f3b7312e180464da
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -43,6 +44,7 @@ jobs:
         run: |
           java -jar ow-lang/target/OwIDE.jar check examples/native_modular_shop/main.ow
           java -jar ow-lang/target/OwIDE.jar check examples/flow2_shop/main.ow
+          java -jar ow-lang/target/OwIDE.jar check examples/flow2_shop/advanced.ow
           java -jar ow-lang/target/OwIDE.jar check ow-lang/examples/module_calculus/signature_include.ow
           java -jar ow-lang/target/OwIDE.jar check ow-lang/examples/module_calculus/module_aliases.ow
           java -jar ow-lang/target/OwIDE.jar check ow-lang/examples/module_calculus/qualified_modules.ow
@@ -72,6 +74,14 @@ jobs:
           java -jar ow-lang/target/OwIDE.jar run tests/flow2_dependency_cycle.ow
           java -jar ow-lang/target/OwIDE.jar run tests/flow2_reactivation.ow > /tmp/flow2-reactivation.log
           python3 tools/check_flow2_output.py /tmp/flow2-shop.log /tmp/flow2-rollback.log /tmp/flow2-reactivation.log
+      - name: Advanced module integration and native LLVM smoke test
+        run: |
+          set -euo pipefail
+          java -jar ow-lang/target/OwIDE.jar run examples/flow2_shop/advanced.ow | tee /tmp/flow2-advanced.log
+          grep -F "PASS flOW advanced modules" /tmp/flow2-advanced.log
+          java -jar ow-lang/target/OwIDE.jar llvm ow-lang/examples/module_calculus/native_llvm.ow /tmp/flow2-native.ll
+          clang /tmp/flow2-native.ll -o /tmp/flow2-native
+          test "$(/tmp/flow2-native)" = "14"
       - name: Reject invalid native bindings, duplicates, and capacity overflow
         run: |
           for file in tests/invalid_functor_argument.ow tests/flow2_invalid_native_lifecycle.ow tests/flow2_duplicate_modules.ow tests/flow2_capacity_overflow.ow; do

@@ -108,9 +108,11 @@ The `tools/verify_contracts.py` script remains for **legacy class-based
 `contracts.json` validation**, not for native module syntax. CI uses the
 real `ow check` tool for native functors and tests negative cases.
 
-CI is pinned to a tested `ow-lang` revision containing PRs #15–#31,
-including reusable signature `include`, transparent module aliases,
-and qualified native module implementations such as `module Shop.Warehouse: INVENTORY`.
+CI is pinned to a tested `ow-lang` revision containing PRs #15–#35,
+including reusable signature/implementation `include`, transparent module
+aliases, lexical nested modules, sealed first-class module packages and
+static integer LLVM lowering. See
+[advanced flOW integration](examples/flow2_shop/advanced.ow).
 See [architecture and OCaml feature comparison](docs/ARCHITECTURE.md).
 
 ## Legacy examples

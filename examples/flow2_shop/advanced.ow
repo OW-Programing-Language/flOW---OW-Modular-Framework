@@ -1,0 +1,62 @@
+import "../../src/App.ow"
+import "inventory/api/InventoryApi.ow"
+import "inventory/infra/Warehouse.ow"
+import "orders/api/OrdersApi.ow"
+import "orders/infra/MakeOrders.ow"
+import "notifications/api/NotificationsApi.ow"
+import "notifications/infra/MakeNotifications.ow"
+
+# Inherited public methods delegate to the original module.
+module_type INSPECT:
+  fn inspect(x int) -> int
+
+module Inspector: INSPECT
+  fn inspect(x int) -> int:
+    return: x + 4
+
+module DecoratedInspector: INSPECT
+  include Inspector
+
+# This signature exposes only Public, not the hidden sibling.
+module_type CATALOG:
+  module Public: INSPECT
+  fn score(x int) -> int
+
+module Catalog: CATALOG
+  module_type SECRET:
+    fn offset() -> int
+
+  module Public: INSPECT
+    include DecoratedInspector
+
+  module Internal: SECRET
+    fn offset() -> int:
+      return: 1
+
+  fn score(x int) -> int:
+    return: Public.inspect(x) + Internal.offset()
+
+main:
+  # Truly packaged first-class modules can pass through containers.
+  set packed: pack(Catalog.Public, "INSPECT")
+  set container: {modules: [packed]}
+  set reader INSPECT: unpack(container.modules[0], "INSPECT")
+  call: assert(reader.inspect(3) == 7, "packed module identity and sealing")
+  call: assert(Catalog.score(3) == 8, "nested private dependency")
+
+  # Integrate native OW functors and flOW's dependency-aware runtime.
+  set orders ORDERS: MakeOrders(Shop.Warehouse)
+  set notifications NOTIFICATIONS: MakeNotifications(orders)
+  set app: new App()
+  call: app.use_native_as(notifications, "NOTIFICATIONS")
+  call: app.use_native_as(orders, "ORDERS")
+  call: app.use_native_as(Shop.Warehouse, "INVENTORY")
+  call: assert(app.boot() == 1, "flOW dependency-ordered startup")
+
+  set inventory INVENTORY: app.service("inventory")
+  call: assert(inventory.available(inventory.issue(4)) == 1, "typed stock")
+  call: assert(orders.place(4) == 1, "functor output is callable")
+  call: app.emit("order.placed", 4)
+  call: assert(app.stop() == 1, "reverse-order stop")
+
+  print: "PASS flOW advanced modules"

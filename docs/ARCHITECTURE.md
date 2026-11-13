@@ -46,10 +46,14 @@ value as an OW native object.
 | Signature `include` composition | Yes (OW PR #29) | Reuses NATIVE_LIFECYCLE in domain APIs |
 | Transparent module aliases and dotted namespace aliases | Yes (OW PR #30) | Used in flow2_shop |
 | Qualified native module definitions (e.g. Shop.Warehouse) | Yes (OW PR #31) | Used in flow2_shop |
-| Full lexical nested module scopes and implementation include | Not yet | **Needs further OW language work** |
+| Implementation-level `include` | Native named paths and functor parameter (OW #33) | Used in advanced example |
+| Lexical nested modules / sealed submodules | Named modules and signatures (OW #35) | Used in advanced example |
+| First-class module packing/unpacking | Explicit sealed packages (OW #32) | Used in advanced example |
+| LLVM codegen for static integer modules/functors | Yes, limited i32 subset (OW #34) | CI tests native executable |
+| Arbitrary dynamic/opaque module LLVM codegen | Not yet | Interpreter only |
 | Full static OCaml type inference | No | Not claimed |
 | Lifecycle stop/restart/rollback, events | Not OCaml language constructs | Yes |
-| Full LLVM native codegen for module values | No | Interpreter only |
+| Full LLVM native codegen for all module values | No | Native static/i32 subset only |
 
 ## Current limitations
 
@@ -69,9 +73,8 @@ value as an OW native object.
 
 ## Next OW language evolution
 
-To match more of OCaml, add `include` for implementations,
-lexically nested module implementations/signatures, module first-class
-packing/unpacking and more complete type-equality inference to
-`OW-Programing-Language/ow-lang`, with compiler tests. flOW can adopt
-those capabilities when they exist, but cannot enforce their semantics
-inside its application runtime.
+More OCaml work remains in `OW-Programing-Language/ow-lang`: mutually recursive
+modules, nested functors, anonymous struct/end expressions, generalized
+existential type inference and LLVM lowering for arbitrary opaque/dynamic
+module values. The current `advanced.ow` example demonstrates the
+implemented interpreter subset without claiming full OCaml parity.
