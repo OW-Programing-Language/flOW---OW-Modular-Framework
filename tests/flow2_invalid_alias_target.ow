@@ -1,0 +1,3 @@
+module Alias = UnknownWarehouse
+main:
+  print: "ERROR: accepted unresolved module alias"

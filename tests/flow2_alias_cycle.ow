@@ -1,0 +1,4 @@
+module A = B
+module B = A
+main:
+  print: "ERROR: accepted cyclic module aliases"

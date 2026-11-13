@@ -6,21 +6,26 @@ import "orders/infra/MakeOrders.ow"
 import "notifications/api/NotificationsApi.ow"
 import "notifications/infra/MakeNotifications.ow"
 
+# Transparent module aliases retain Warehouse's opaque SKU identity.
+module Inventory = Warehouse
+module Shop.Inventory = Inventory
+
 # A real OW module type + two native functors + one flOW event/lifecycle context.
 # Deliberately register in REVERSE dependency order to test topological startup.
 main:
-  set orders ORDERS: MakeOrders(Warehouse)
+  set orders ORDERS: MakeOrders(Shop.Inventory)
   set notifications NOTIFICATIONS: MakeNotifications(orders)
   set app: new App()
   call: app.use_native_as(notifications, "NOTIFICATIONS")
   call: app.use_native_as(orders, "ORDERS")
-  call: app.use_native_as(Warehouse, "INVENTORY")
+  call: app.use_native_as(Inventory, "INVENTORY")
 
   call: assert(app.boot() == 1, "start every native module after its providers")
   set inventory INVENTORY: app.service("inventory")
   set liveOrders ORDERS: app.service("orders")
   set liveNotifications NOTIFICATIONS: app.service("notifications")
   call: assert(inventory.available(inventory.issue(3)) == 1, "typed inventory service")
+  call: assert(Warehouse.available(Shop.Inventory.issue(3)) == 1, "alias shares native type identity")
   call: assert(liveOrders.place(5) == 1, "native Orders functor")
   call: assert(liveOrders.place(90) == 0, "invalid order rejected")
   call: assert(liveNotifications.status(7) == "accepted", "native Notifications functor")
