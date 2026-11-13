@@ -1,0 +1,30 @@
+# Warehouse keeps SKU's integer representation private.
+module Warehouse: INVENTORY
+  type sku: int
+  fn name() -> string:
+    return: "inventory"
+  fn requires() -> array:
+    return: []
+  fn register() -> int:
+    print: "REGISTER inventory"
+    return: 0
+  fn start() -> int:
+    print: "START inventory"
+    return: 0
+  fn stop() -> int:
+    print: "STOP inventory"
+    return: 0
+  fn reload() -> int:
+    print: "RELOAD inventory"
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    if: type == "order.placed"
+      print: "EVENT inventory " + payload
+    return: 0
+  fn issue(value int) -> sku:
+    return: value
+  fn available(value sku) -> int:
+    if: value > 0
+      if: value < 50
+        return: 1
+    return: 0

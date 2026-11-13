@@ -1,0 +1,9 @@
+import "../src/App.ow"
+import "../examples/flow2_shop/inventory/api/InventoryApi.ow"
+import "../examples/flow2_shop/inventory/infra/Warehouse.ow"
+
+main:
+  set app: new App()
+  call: app.use_native(Warehouse)
+  call: app.use_native(Warehouse)
+  print: "ERROR: duplicate module name accepted"

@@ -1,0 +1,26 @@
+# Higher-level composition: Notifications depends only on ORDERS.
+functor MakeNotifications(Order: ORDERS) -> NOTIFICATIONS:
+  fn name() -> string:
+    return: "notifications"
+  fn requires() -> array:
+    return: ["orders"]
+  fn register() -> int:
+    print: "REGISTER notifications"
+    return: 0
+  fn start() -> int:
+    print: "START notifications"
+    return: 0
+  fn stop() -> int:
+    print: "STOP notifications"
+    return: 0
+  fn reload() -> int:
+    print: "RELOAD notifications"
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    if: type == "order.placed"
+      print: "EVENT notifications " + payload
+    return: 0
+  fn status(quantity int) -> string:
+    if: Order.place(quantity) == 1
+      return: "accepted"
+    return: "rejected"

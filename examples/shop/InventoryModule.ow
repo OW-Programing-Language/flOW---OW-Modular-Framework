@@ -35,6 +35,9 @@ class InventoryModule(Module):
       print: "[inventory] -" + payload + " -> " + this.stock + " left"
     return: 0
 
+  fn stop(app):
+    return: 0
+
   fn reload(app):
     set this.stock: this.start_stock
     print: "[inventory] reloaded -> " + this.stock

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Preflight verifier for OW interface signatures and flOW module boundaries.
+"""Legacy flOW contracts.json verifier for class-based Modules.
 
-OW checks nominal interface ancestry at runtime, but does not currently check
-that a class implements all declared interface members. This tool checks method
-name, arity and public visibility, plus service contracts and folder boundaries.
-It is not an OCaml module/functor compiler or a general-purpose OW type checker.
+The native OW compiler now supports module_type / functor_type / with_type,
+opaque type checking and import boundaries via 'ow check'. This Python verifier
+is retained ONLY for legacy class-based flOW manifests and service declarations.
+It is not an OW language type checker or an alternative to native ow check.
 """
 from __future__ import annotations
 

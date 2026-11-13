@@ -48,6 +48,9 @@ class OrdersModule(Module, OrdersApi):
   fn on_event(type, payload):
     return: 0
 
+  fn stop(app):
+    return: 0
+
   fn reload(app):
     set this.count: 0
     return: 0

@@ -2,69 +2,101 @@ import "Registry.ow"
 import "Module.ow"
 import "Functor.ow"
 import "ModuleFunctor.ow"
+import "NativeModuleAdapter.ow"
 
-# The application validates service contract names at boot.
-# tools/verify_contracts.py checks OW interface member signatures before run.
+# flOW: transactional, dependency-ordered application lifecycle.
+# Return convention for start(app): >= 0 success; negative failure, triggers rollback.
 class App:
   field registry
   field config
   field service_contracts
+  field provider_owners
+  field registering
   field mods
   field names
   field enabled
+  field started
+  field start_order
+  field start_count
   field count
   field requirement_services
   field requirement_types
   field requirement_owners
   field requirement_count
   field contract_errors
+  field booted
+  field boot_attempted
 
   fn new():
     set this.registry: new Registry()
     set this.config: new Registry()
     set this.service_contracts: new Registry()
+    set this.provider_owners: new Registry()
+    set this.registering: ""
     set this.mods: array(64, 0)
     set this.names: array(64, "")
     set this.enabled: array(64, 1)
+    set this.started: array(64, 0)
+    set this.start_order: array(64, 0)
+    set this.start_count: 0
     set this.count: 0
     set this.requirement_services: array(128, "")
     set this.requirement_types: array(128, "")
     set this.requirement_owners: array(128, "")
     set this.requirement_count: 0
     set this.contract_errors: 0
+    set this.booted: 0
+    set this.boot_attempted: 0
+    return: 0
 
   fn use(m):
+    call: assert(this.boot_attempted == 0, "flOW: cannot add a module after boot")
     set checked Module: m
+    call: assert(this.count < len(this.mods), "flOW: module capacity reached")
+    set module_name: checked.name()
+    call: assert(this.index_of(module_name) == 99, "flOW: duplicate module name")
     set ms: this.mods
     set ns: this.names
     set es: this.enabled
+    set active: this.started
     set ms[this.count]: checked
-    set ns[this.count]: checked.name()
+    set ns[this.count]: module_name
     set es[this.count]: 1
+    set active[this.count]: 0
     set this.count: this.count + 1
-    return: 0
+    return: checked
 
   fn apply(f):
     set checked_functor Functor: f
     set m Module: checked_functor.make(this)
-    call: this.use(m)
-    return: m
+    return: this.use(m)
 
-  # Apply a typed module-parameterized functor, rather than injecting App.
-  # The functor validates its public input API via an OW typed binding.
-  # The output must be a Module and will be registered for boot().
   fn apply_to(f, dependency):
     set checked ModuleFunctor: f
     set result Module: checked.make(dependency)
-    call: this.use(result)
-    return: result
+    return: this.use(result)
 
-  # Legacy name-only service registration.
+  # Native module values remain intact in the registry. Only lifecycle operations
+  # go through the typed NATIVE_LIFECYCLE adapter.
+  fn use_native(native):
+    return: this.use_native_as(native, "NATIVE_LIFECYCLE")
+
+  fn use_native_as(native, contract):
+    set adapter: new NativeModuleAdapter(native, contract)
+    call: this.use(adapter)
+    return: native
+
   fn provide(name, val):
+    if: this.registry.has(name) == 1
+      if: this.registering != ""
+        print: "flOW: duplicate provider for service '" + name + "'"
+        set this.contract_errors: this.contract_errors + 1
+        return: 0
     call: this.registry.put(name, val)
-    return: 0
+    if: this.registering != ""
+      call: this.provider_owners.put(name, this.registering)
+    return: 1
 
-  # Declare a provided service's public nominal interface.
   fn provide_as(name, contract, val):
     if: this.registry.has(name) == 1
       print: "flOW: duplicate service provider '" + name + "'"
@@ -72,10 +104,12 @@ class App:
       return: 0
     call: this.registry.put(name, val)
     call: this.service_contracts.put(name, contract)
-    return: 0
+    if: this.registering != ""
+      call: this.provider_owners.put(name, this.registering)
+    return: 1
 
-  # Declare a consumer's required interface at registration.
   fn require_as(owner, service, contract):
+    call: assert(this.requirement_count < len(this.requirement_services), "flOW: requirement capacity reached")
     set names: this.requirement_services
     set types: this.requirement_types
     set owners: this.requirement_owners
@@ -102,12 +136,11 @@ class App:
 
   fn index_of(name):
     set i int: 0
-    set found int: 99
     while: i < this.count
       if: this.names[i] == name
-        set found: i
+        return: i
       set i: i + 1
-    return: found
+    return: 99
 
   fn is_enabled(name):
     set idx int: this.index_of(name)
@@ -115,36 +148,156 @@ class App:
       return: 0
     return: this.enabled[idx]
 
+  # Check both legacy requires() and typed require_as() edges.
+  fn can_start(idx):
+    set m: this.mods[idx]
+    set reqs: m.requires()
+    set i int: 0
+    while: i < len(reqs)
+      set service_name: reqs[i]
+      if: this.provider_owners.has(service_name) == 1
+        set owner: this.provider_owners.get(service_name)
+        set dependency_idx int: this.index_of(owner)
+        if: dependency_idx != 99
+          if: this.started[dependency_idx] == 0
+            return: 0
+      set i: i + 1
+
+    set j int: 0
+    while: j < this.requirement_count
+      if: this.requirement_owners[j] == m.name()
+        set service_name: this.requirement_services[j]
+        if: this.provider_owners.has(service_name) == 1
+          set owner: this.provider_owners.get(service_name)
+          set dependency_idx int: this.index_of(owner)
+          if: dependency_idx != 99
+            if: this.started[dependency_idx] == 0
+              return: 0
+      set j: j + 1
+    return: 1
+
+  fn start_index(idx):
+    if: this.started[idx] == 1
+      return: 1
+    if: this.enabled[idx] == 0
+      return: 0
+    if: this.can_start(idx) == 0
+      return: 0
+    set m: this.mods[idx]
+    set code int: m.start(this)
+    if: code < 0
+      print: "flOW: module '" + m.name() + "' failed to start"
+      return: 0
+    set active: this.started
+    set active[idx]: 1
+    set order: this.start_order
+    set order[this.start_count]: idx
+    set this.start_count: this.start_count + 1
+    return: 1
+
+  # Stop in the reverse order of successful starts; also used for rollback.
+  fn stop():
+    set i int: this.start_count
+    while: i > 0
+      set i: i - 1
+      set idx: this.start_order[i]
+      if: this.started[idx] == 1
+        set m: this.mods[idx]
+        call: m.stop(this)
+        set active: this.started
+        set active[idx]: 0
+    set this.start_count: 0
+    set this.booted: 0
+    return: 1
+
   fn enable(name):
     set idx int: this.index_of(name)
     if: idx == 99
       return: 0
+    if: this.enabled[idx] == 1
+      return: 1
     set es: this.enabled
     set es[idx]: 1
-    return: 0
+    if: this.booted == 1
+      if: this.start_index(idx) == 0
+        set es[idx]: 0
+        print: "flOW: cannot enable '" + name + "' before its dependencies"
+        return: 0
+    return: 1
 
+  # Do not stop a provider whose started consumers still require its services.
   fn disable(name):
     set idx int: this.index_of(name)
     if: idx == 99
       return: 0
+    set i int: 0
+    while: i < this.count
+      if: this.started[i] == 1
+        if: i != idx
+          set consumer: this.mods[i]
+          set reqs: consumer.requires()
+          set j int: 0
+          while: j < len(reqs)
+            set need: reqs[j]
+            if: this.provider_owners.has(need) == 1
+              if: this.provider_owners.get(need) == name
+                print: "flOW: cannot disable '" + name + "' while required by '" + consumer.name() + "'"
+                return: 0
+            set j: j + 1
+      set i: i + 1
+    # Protect consumers declared only through the typed require_as registry.
+    set r int: 0
+    while: r < this.requirement_count
+      set need: this.requirement_services[r]
+      if: this.provider_owners.has(need) == 1
+        if: this.provider_owners.get(need) == name
+          set dependent int: this.index_of(this.requirement_owners[r])
+          if: dependent != 99
+            if: dependent != idx
+              if: this.started[dependent] == 1
+                print: "flOW: cannot disable '" + name + "' while required by '" + this.requirement_owners[r] + "'"
+                return: 0
+      set r: r + 1
+
     set es: this.enabled
     set es[idx]: 0
-    return: 0
+    if: this.started[idx] == 1
+      set m: this.mods[idx]
+      call: m.stop(this)
+      set active: this.started
+      set active[idx]: 0
+      # Compact startup order; repeated enable/disable must not overflow.
+      set order: this.start_order
+      set pos int: 0
+      while: pos < this.start_count
+        if: order[pos] == idx
+          set k int: pos
+          while: k < this.start_count - 1
+            set order[k]: order[k + 1]
+            set k: k + 1
+          set this.start_count: this.start_count - 1
+          set pos: this.start_count
+        else:
+          set pos: pos + 1
+    return: 1
 
   fn reload(name):
     set idx int: this.index_of(name)
     if: idx == 99
       return: 0
+    if: this.started[idx] == 0
+      return: 0
     set m: this.mods[idx]
     call: m.reload(this)
-    return: 0
+    return: 1
 
   fn emit(type, payload):
     set i int: 0
     while: i < this.count
       if: this.enabled[i] == 1
-        set m: this.mods[i]
-        call: m.on_event(type, payload)
+        if: this.started[i] == 1
+          set m: this.mods[i]
+          call: m.on_event(type, payload)
       set i: i + 1
     return: 0
 
@@ -153,14 +306,12 @@ class App:
     if: this.contract_errors > 0
       set ok: 0
 
-    # Preserve old name-only requirements.
     set i int: 0
     while: i < this.count
       set m: this.mods[i]
       set reqs: m.requires()
-      set rn int: len(reqs)
       set r int: 0
-      while: r < rn
+      while: r < len(reqs)
         set need: reqs[r]
         if: this.registry.has(need) == 0
           print: "flOW: module '" + m.name() + "' needs missing service '" + need + "'"
@@ -168,15 +319,11 @@ class App:
         set r: r + 1
       set i: i + 1
 
-    # Verify typed API requirements before any module is started.
     set j int: 0
     while: j < this.requirement_count
-      set names: this.requirement_services
-      set types: this.requirement_types
-      set owners: this.requirement_owners
-      set need: names[j]
-      set expected: types[j]
-      set consumer: owners[j]
+      set need: this.requirement_services[j]
+      set expected: this.requirement_types[j]
+      set consumer: this.requirement_owners[j]
       if: this.index_of(consumer) == 99
         print: "flOW: requirement declared by unregistered module '" + consumer + "'"
         set ok: 0
@@ -195,20 +342,47 @@ class App:
       set j: j + 1
     return: ok
 
+  # All registrations complete before dependency verification; startup is
+  # topological and rolls back previously started modules on a negative result.
   fn boot():
+    if: this.boot_attempted == 1
+      print: "flOW: boot already attempted; create a fresh App to retry"
+      return: 0
+    set this.boot_attempted: 1
     set i int: 0
     while: i < this.count
       set m: this.mods[i]
+      set this.registering: m.name()
       call: m.register(this)
+      set this.registering: ""
       set i: i + 1
-    set ok int: this.verify()
-    if: ok == 0
+    if: this.verify() == 0
       print: "flOW: boot aborted (unsatisfied dependencies or contracts)."
       return: 0
-    set j int: 0
-    while: j < this.count
-      set m2: this.mods[j]
-      call: m2.start(this)
-      set j: j + 1
-    print: "flOW: booted " + this.count + " module(s)."
+
+    set goal int: 0
+    set n int: 0
+    while: n < this.count
+      if: this.enabled[n] == 1
+        set goal: goal + 1
+      set n: n + 1
+
+    while: this.start_count < goal
+      set before int: this.start_count
+      set j int: 0
+      while: j < this.count
+        if: this.enabled[j] == 1
+          if: this.started[j] == 0
+            if: this.can_start(j) == 1
+              if: this.start_index(j) == 0
+                call: this.stop()
+                print: "flOW: rolled back failed startup"
+                return: 0
+        set j: j + 1
+      if: this.start_count == before
+        call: this.stop()
+        print: "flOW: dependency cycle or disabled provider; boot rolled back"
+        return: 0
+    set this.booted: 1
+    print: "flOW: booted " + this.start_count + " module(s)."
     return: 1

@@ -1,0 +1,37 @@
+import "../../src/App.ow"
+import "inventory/api/InventoryApi.ow"
+import "inventory/infra/Warehouse.ow"
+import "orders/api/OrdersApi.ow"
+import "orders/infra/MakeOrders.ow"
+import "notifications/api/NotificationsApi.ow"
+import "notifications/infra/MakeNotifications.ow"
+
+# A real OW module type + two native functors + one flOW event/lifecycle context.
+# Deliberately register in REVERSE dependency order to test topological startup.
+main:
+  set orders ORDERS: MakeOrders(Warehouse)
+  set notifications NOTIFICATIONS: MakeNotifications(orders)
+  set app: new App()
+  call: app.use_native_as(notifications, "NOTIFICATIONS")
+  call: app.use_native_as(orders, "ORDERS")
+  call: app.use_native_as(Warehouse, "INVENTORY")
+
+  call: assert(app.boot() == 1, "start every native module after its providers")
+  set inventory INVENTORY: app.service("inventory")
+  set liveOrders ORDERS: app.service("orders")
+  set liveNotifications NOTIFICATIONS: app.service("notifications")
+  call: assert(inventory.available(inventory.issue(3)) == 1, "typed inventory service")
+  call: assert(liveOrders.place(5) == 1, "native Orders functor")
+  call: assert(liveOrders.place(90) == 0, "invalid order rejected")
+  call: assert(liveNotifications.status(7) == "accepted", "native Notifications functor")
+
+  call: app.emit("order.placed", 7)
+  call: assert(app.disable("inventory") == 0, "provider cannot stop while used")
+  call: assert(app.disable("notifications") == 1, "disable stops a subscriber")
+  call: app.emit("order.placed", 8)
+  call: assert(app.enable("notifications") == 1, "enable restarts subscriber")
+  call: app.emit("order.placed", 9)
+  call: assert(app.reload("inventory") == 1, "reload a typed native module")
+  call: assert(app.stop() == 1, "reverse dependency shutdown")
+  call: assert(app.start_count == 0, "all modules stopped")
+  print: "PASS flOW v2: native functors + lifecycle + events + typed services"

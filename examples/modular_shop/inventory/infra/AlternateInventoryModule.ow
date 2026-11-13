@@ -29,6 +29,9 @@ class AlternateInventoryModule(Module, InventoryApi):
       set this.stock: this.stock - payload
     return: 0
 
+  fn stop(app):
+    return: 0
+
   fn reload(app):
     set this.stock: this.initial_stock
     return: 0

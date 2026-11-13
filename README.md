@@ -1,230 +1,132 @@
-# flOW — a modular framework for OW
+# flOW — typed modular application framework for OW
 
-**flOW** helps you build applications in the
-[OW language](https://github.com/OW-Programing-Language) as a **modular monolith**:
-small, self-contained modules that are composed by an application context and
-communicate through **services** and **events** instead of referencing each
-other directly.
+flOW combines **OW's native, OCaml-inspired module/functor system** with a
+**Spring Modulith-inspired runtime** for lifecycle, services and events.
 
-Inspired by **Spring Modulith** (application modules + domain events + dependency
-verification), mod-loader style composition (drop in a module, it wires itself),
-and **OCaml functors** (modules parameterized by other modules).
+The two formerly separate worlds now have a typed bridge:
+`App.use_native()` / `App.use_native_as()` wrap a native OW module for
+lifecycle operations while **retaining the original typed module value**
+in the service registry.
 
-Modules are first-class and manageable at runtime: **parameterizable** (config),
-**enable / disable**, **reload**, and built via **functors**.
+**Start with the [flOW v2 three-domain shop](examples/flow2_shop/README.md).**
 
-```yaml
-main:
-  set app: new App()
-  call: app.set_config("inventory.stock", 25)   # parameterize
-  call: app.apply(new InventoryFunctor())        # functor builds a configured module
-  call: app.use(new NotifyModule())
-  call: app.use(new OrdersModule())
-  call: app.boot()                               # register -> verify -> start
-  call: app.disable("notify")                    # toggle a module off
-  call: app.reload("inventory")                  # reset a module's state
-```
+## 1. Native OW functors and modules
 
-## Concepts
-
-| Piece | File | Role |
-|------|------|------|
-| **App** | `src/App.ow` | The application context: registers modules, holds the service registry and config, dispatches events, and manages modules (enable/disable/reload). |
-| **Module** | `src/Module.ow` | The contract a module implements: `name()`, `requires()`, `register(app)`, `start(app)`, `on_event(type, payload)`, `reload(app)`. |
-| **Functor** | `src/Functor.ow` | `make(app)` → builds a configured Module from the app context (OCaml-style). |
-| **Registry** | `src/Registry.ow` | Name → value store (used for both services and config). |
-
-## Boot lifecycle
-1. **register** — every module wires itself: `app.provide(name, service)`, reads config.
-2. **verify** — every service a module declared in `requires()` must exist, or boot aborts.
-3. **start** — every module runs: `app.emit(type, payload)`, use services via `app.service(name)`.
-
-## Events
-`app.emit(type, payload)` is delivered to **every enabled module's**
-`on_event(type, payload)`. Modules never reference each other — a publisher does
-not know its subscribers. Disable a module and it stops receiving events.
-
-## Module controls
-
-### Parameterize (config)
-```yaml
-call: app.set_config("sound.track", "piano1")
-# inside a module:
-set track: app.config_or("sound.track", "calm1")   # value or default
-```
-
-### Enable / disable
-```yaml
-call: app.disable("notify")      # stops receiving events
-call: app.enable("notify")
-set on int: app.is_enabled("notify")
-```
-
-### Reload
-```yaml
-call: app.reload("inventory")    # calls the module's reload(app) to reset state
-```
-
-### Functors (OCaml-style)
-A functor builds a module from the app context, so a module can be parameterized
-by config or by other modules/services — like `module Make (Deps) = ...`:
-```yaml
-class InventoryFunctor:
-  fn new():
-    return: 0
-  fn make(app):
-    set n int: app.config_or("inventory.stock", 10)
-    set m: new InventoryModule()
-    call: m.set_stock(n)
-    return: m
-# register it:
-call: app.apply(new InventoryFunctor())
-```
-
-## Writing a module
-Implement the six `Module` methods. React to events in `on_event`; reset in `reload`.
-```yaml
-class InventoryModule:
-  field stock
-  field start_stock
-  fn new():
-    set this.start_stock: 10
-    set this.stock: 10
-  fn name():
-    return: "inventory"
-  fn requires():
-    return: array(0, 0)
-  fn set_stock(n):
-    set this.start_stock: n
-    set this.stock: n
-    return: 0
-  fn register(app):
-    call: app.provide("inventory", this)
-    return: 0
-  fn start(app):
-    return: 0
-  fn on_event(type, payload):
-    if: type == "order.placed"
-      set this.stock: this.stock - payload
-    return: 0
-  fn reload(app):
-    set this.stock: this.start_stock
-    return: 0
-```
-
-## App API
-| Call | Does |
-|------|------|
-| `app.use(module)` | register a module |
-| `app.apply(functor)` | build a module via `functor.make(app)` and register it |
-| `app.provide(name, value)` / `app.service(name)` / `app.has_service(name)` | service container |
-| `app.set_config(key, value)` / `app.config_or(key, default)` | config |
-| `app.enable(name)` / `app.disable(name)` / `app.is_enabled(name)` | toggle a module |
-| `app.reload(name)` | reset a module |
-| `app.emit(type, payload)` | publish an event to all enabled modules |
-| `app.verify()` / `app.boot()` | verify dependencies / register→verify→start |
-
-## Try it
-```bash
-ow run examples/shop/main.ow   # functor + config + events + disable + reload
-ow run tests/run.ow            # the test suite (prints PASS/FAIL)
-```
-
-## Layout
-```
-src/        flOW core (App, Registry, Module, Functor)
-examples/   shop/ — a worked modular-monolith example
-tests/      run.ow — registry, config, events, enable/disable, reload, functor, verify
-```
-
-## License
-[MIT](LICENSE).
-
-## Interface-checked modules and functors
-
-flOW now supports explicit service contracts:
+OW provides native `module_type`, `module`, `functor`, `functor_type`,
+opaque types, `with_type`, generative and applicative identities and
+higher-order functors. The `ow check` front end validates known module
+expressions without executing `main`. These are **OW language features**,
+not features implemented by the flOW class-based runtime.
 
 ```ow
-class OrdersModule(Module, OrdersApi):
-  fn register(app):
-    set api OrdersApi: this
-    call: app.provide_as("orders", "OrdersApi", api)
-    call: app.require_as("orders", "inventory", "InventoryApi")
-    return: 0
+# inventory/api/InventoryApi.ow
+module_type INVENTORY:
+  type sku
+  fn issue(value int) -> sku
+  fn available(value sku) -> int
+
+# orders/infra/MakeOrders.ow
+functor MakeOrders(Stock: INVENTORY) -> ORDERS:
+  fn place(quantity int) -> int:
+    return: Stock.available(Stock.issue(quantity))
 ```
 
-The new `App.provide_as` / `App.require_as` APIs validate missing, duplicate,
-and mismatched service contracts **before modules start**. OW typed bindings
-check nominal interface membership; run the additional Python preflight for
-**method existence, visibility, parameter count, functor contracts, dependency
-manifests, and cross-module api/infra boundaries**:
+The complete [flow2_shop](examples/flow2_shop/README.md) includes additional
+lifecycle exports in each public signature so the module can also implement
+`NATIVE_LIFECYCLE` structurally.
 
-```bash
-python3 tools/verify_contracts.py
-python3 -m unittest discover -s tests -p test_contracts.py
-ow run examples/modular_shop/main.ow
-ow run tests/runtime_contracts.ow
-```
-
-See the [three-module shop](examples/modular_shop/README.md) with Inventory,
-Orders and Notifications, each in its own `api/` and `infra/` directory and
-each constructed by an independent configurable functor.
-
-**Migration:** Existing modules and factories must declare `Module` and
-`Functor` respectively when using `App.use` / `App.apply`. The original
-examples and tests were updated for this rule.
-
-**OCaml comparison:** flOW verifies named contracts at runtime and OW source
-interfaces in the preflight step. OW does **not** currently implement OCaml's
-full typed static module/functor system, argument/return type checking or
-generative functors. These checks become mandatory for CI via the workflow.
-
-## Module-parameterized functors (OCaml-inspired)
-
-The original `Functor.make(app)` only read settings from the app context.
-The new `ModuleFunctor.make(dependency)` receives a real **module interface**.
-The app composition root can apply it with:
+## 2. flOW runtime bridge
 
 ```ow
+set orders ORDERS: MakeOrders(Warehouse)
 set app: new App()
-set inventoryModule: app.apply(new InventoryFunctor())
-set ordersFunctor: new OrdersFunctor()
-call: app.apply_to(ordersFunctor, inventoryModule)
-call: app.boot()
+call: app.use_native_as(orders, "ORDERS")
+call: app.use_native_as(Warehouse, "INVENTORY")
+call: assert(app.boot() == 1)
+set typedInventory INVENTORY: app.service("inventory")
+call: app.emit("order.placed", 5)
+call: app.stop()
 ```
 
-`OrdersFunctor.make(inventory)` begins with `set dependency InventoryApi:
-inventory` and builds a module checked as `OrdersApi`. Passing an unrelated
-module raises an OW type error. The same OrdersFunctor also accepts an entirely
-different implementation of InventoryApi, as demonstrated in
-[alternate.ow](examples/modular_shop/alternate.ow).
+`src/NativeLifecycle.ow` is a checked native module signature:
+`name, requires, register, start, stop, reload, on_event`.
+`NativeModuleAdapter` implements the legacy `Module` class interface.
+It delegates lifecycle methods and registers the **original native module**
+as a service. `set typedInventory INVENTORY: app.service(...)` verifies the
+domain module signature on retrieval, rather than casting it to an untyped
+class.
 
-The preflight verifier additionally checks its declared parameter and result
-contracts before execution. This means module-to-module parameterization, not
-just application-wide configuration.
+Contract names passed to `use_native_as` remain **runtime labels**; they
+are not a substitute for the OW-checked module signature.
+
+Native event payloads are currently `int` with event names of type `string`.
+The adapter is an interpreter/runtime mechanism; OW LLVM native codegen does
+not yet lower module/functor values.
+
+## 3. Lifecycle and dependency rules
+
+- `app.use(module)` — registers a legacy class-based Module.
+- `app.apply(functor)` / `app.apply_to(functor,dependency)` — keeps legacy
+  class factories operational.
+- `app.use_native(module)` / `use_native_as(module, label)` — registers a
+  genuine native OW module with checked lifecycle signature.
+- `app.boot()` — registers all providers, verifies contracts, then starts
+  in **dependency order**, even if registered in reverse order.
+- `app.stop()` — stops started modules in **reverse startup order**.
+- `app.disable(name)` — stops a module, but refuses disabling a required
+  provider with running dependents.
+- `app.enable(name)` — starts a disabled module only when its dependencies
+  are running. Repeated enable/disable cycles do not fill the startup array.
+- `app.reload(name)` — reloads only a running module.
+- `app.emit(type,payload)` — dispatches to currently running, enabled modules.
+- `start(app)` returning a **negative integer** aborts boot and rolls back
+  successfully started modules. Existing implementations returning `0`
+  remain successful.
+
+Module names are unique; all fixed-capacity arrays check bounds rather
+than silently overwriting data. The current maximum remains **64 modules**,
+**128 typed requirements**, and **64 registry entries** per registry.
+A failed boot is one-shot: create a new `App` to retry.
+
+**Migration for class Modules:** implementations must now provide `stop(app)`.
+flOW v2 adds it to all shipped legacy examples. Return `0` in modules with
+no cleanup.
+
+## 4. Compile-time checks versus legacy validation
 
 ```bash
+ow check examples/flow2_shop/main.ow   # native compiler check, no execution
+ow run examples/flow2_shop/main.ow     # native functors + flOW runtime
+ow run tests/flow2_rollback.ow         # dependency rollback test
+
+# Only for older class-based modular_shop service manifests:
 python3 tools/verify_contracts.py
 python3 -m unittest discover -s tests -p 'test_*.py'
-ow run examples/modular_shop/main.ow
-ow run examples/modular_shop/alternate.ow
 ```
 
-**Important limits:** This is typed *runtime* module application plus preflight
-source verification. The OW compiler does **not** yet provide OCaml's full
-module-language semantics: full type inference, `with type` sharing constraints,
-abstract type sealing, higher-order functor types, or applicative/generative
-type identities. The API is a practical step towards those capabilities, not
-feature parity with OCaml.
+The `tools/verify_contracts.py` script remains for **legacy class-based
+`contracts.json` validation**, not for native module syntax. CI uses the
+real `ow check` tool for native functors and tests negative cases.
 
-## Native OW module/functor showcase
+CI is pinned to a tested `ow-lang` revision containing PRs #15–#28.
+See [architecture and OCaml feature comparison](docs/ARCHITECTURE.md).
 
-For **real module-parameterized functors** (not just `make(app)` factories),
-see [examples/native_modular_shop](examples/native_modular_shop). It contains
-three Spring-Modulith-style business domains with `api/` and `infra/`
-folders, an opaque Inventory SKU, and two OW-native functors applied to the
-Inventory module. This example runs using the compiler features merged into
-`ow-lang` through issue #16 and is tested in CI.
+## Legacy examples
 
-The runtime `App` API and native OW module calculus are distinct composition
-models; the example documents that boundary explicitly.
+- [shop](examples/shop/main.ow) — config-driven class functor and events.
+- [modular_shop](examples/modular_shop/README.md) — three legacy class modules,
+  `provide_as` / `require_as` and manifests.
+- [native_modular_shop](examples/native_modular_shop/README.md) — original
+  native functor demonstration **without runtime integration**.
+- [flow2_shop](examples/flow2_shop/README.md) — full native module + runtime
+  lifecycle integration (recommended).
+
+## Scope relative to OCaml
+
+flOW is **not the OCaml compiler**. It uses the first-order native module
+features implemented by OW and adds application-specific runtime concerns
+that OCaml itself does not supply as a framework. Nested modules, aliases,
+`include` and complete OCaml module-language inference must be implemented
+in the **OW compiler**, not claimed as flOW runtime features.
+
+[MIT License](LICENSE).

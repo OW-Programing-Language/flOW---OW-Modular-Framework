@@ -24,5 +24,8 @@ class OrdersModule(Module):
   fn on_event(type, payload):
     return: 0
 
+  fn stop(app):
+    return: 0
+
   fn reload(app):
     return: 0

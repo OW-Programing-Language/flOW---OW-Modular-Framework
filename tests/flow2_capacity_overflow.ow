@@ -1,0 +1,9 @@
+import "../src/Registry.ow"
+
+main:
+  set store: new Registry()
+  set i int: 0
+  while: i < 65
+    call: store.put("key" + i, i)
+    set i: i + 1
+  print: "ERROR: registry silently exceeded capacity"

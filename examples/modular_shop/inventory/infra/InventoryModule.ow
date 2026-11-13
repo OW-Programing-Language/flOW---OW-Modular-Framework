@@ -34,6 +34,9 @@ class InventoryModule(Module, InventoryApi):
       print: "[inventory] remaining: " + this.stock
     return: 0
 
+  fn stop(app):
+    return: 0
+
   fn reload(app):
     set this.stock: this.start_stock
     return: 0

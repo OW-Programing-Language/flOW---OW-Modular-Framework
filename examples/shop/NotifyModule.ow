@@ -21,5 +21,8 @@ class NotifyModule(Module):
       print: "[notify] order confirmed for " + payload + " item(s)"
     return: 0
 
+  fn stop(app):
+    return: 0
+
   fn reload(app):
     return: 0

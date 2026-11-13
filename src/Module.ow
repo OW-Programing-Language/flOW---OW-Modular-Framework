@@ -1,8 +1,10 @@
-# flOW module lifecycle interface.
+# flOW lifecycle interface. Stop is required for ordered shutdown/rollback.
+# start(app) returns 0 on success and a negative integer on failure.
 interface Module:
   fn name()
   fn requires()
   fn register(app)
   fn start(app)
+  fn stop(app)
   fn on_event(type, payload)
   fn reload(app)
