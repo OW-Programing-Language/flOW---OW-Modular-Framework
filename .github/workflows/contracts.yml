@@ -21,9 +21,9 @@ jobs:
         with:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
-          # Includes all module/functor features and `ow check` through PR #28.
+          # Includes PR #29: signature include + OW module/functor checks.
           # Pin the exact tested commit for reproducibility; update intentionally.
-          ref: 2e704ef843e0cac555280f0bc282845467fee117
+          ref: d441d06e7ee59fea64ab0066a9782b8df2b03f9c
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -43,14 +43,17 @@ jobs:
         run: |
           java -jar ow-lang/target/OwIDE.jar check examples/native_modular_shop/main.ow
           java -jar ow-lang/target/OwIDE.jar check examples/flow2_shop/main.ow
+          java -jar ow-lang/target/OwIDE.jar check ow-lang/examples/module_calculus/signature_include.ow
           java -jar ow-lang/target/OwIDE.jar check tests/flow2_rollback.ow
           java -jar ow-lang/target/OwIDE.jar check tests/flow2_dependency_cycle.ow
       - name: Reject an invalid native functor at compile time
         run: |
-          if java -jar ow-lang/target/OwIDE.jar check tests/flow2_invalid_native_functor.ow; then
-            echo "ERROR: invalid functor input passed ow check"
-            exit 1
-          fi
+          for file in tests/flow2_invalid_native_functor.ow tests/flow2_missing_included_lifecycle.ow tests/flow2_conflicting_included_signature.ow; do
+            if java -jar ow-lang/target/OwIDE.jar check "$file"; then
+              echo "ERROR: invalid native signature passed ow check: $file"
+              exit 1
+            fi
+          done
       - name: Run original flOW compatibility suite
         run: |
           java -jar ow-lang/target/OwIDE.jar run tests/run.ow

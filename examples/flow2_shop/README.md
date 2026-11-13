@@ -19,6 +19,11 @@ flow2_shop/
 
 ## Why this is different from the old flOW example
 
+`module_type INVENTORY`, `ORDERS` and `NOTIFICATIONS` each use
+`include NATIVE_LIFECYCLE` to reuse the lifecycle signature instead of
+repeating seven method declarations. The compiler expands included public
+methods before validating the implementations and functors.
+
 `MakeOrders` and `MakeNotifications` are **native OW functors**, not
 `class Functor.make(app)` factories. The compiler validates their module
 signatures, arguments, abstract SKU identity and public exports. A private
