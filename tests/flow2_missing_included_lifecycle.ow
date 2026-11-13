@@ -1,0 +1,14 @@
+import "../src/NativeLifecycle.ow"
+
+module_type BROKEN_API:
+  include NATIVE_LIFECYCLE
+  fn place(q int) -> int
+
+module Incomplete: BROKEN_API
+  fn name() -> string:
+    return: "incomplete"
+  fn place(q int) -> int:
+    return: q
+
+main:
+  print: "ERROR: missing included lifecycle methods accepted"

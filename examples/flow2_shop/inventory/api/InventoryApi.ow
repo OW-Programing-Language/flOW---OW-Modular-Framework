@@ -1,12 +1,6 @@
 # Inventory publishes a typed abstract SKU and participates in flOW lifecycle.
 module_type INVENTORY:
   type sku
-  fn name() -> string
-  fn requires() -> array
-  fn register() -> int
-  fn start() -> int
-  fn stop() -> int
-  fn reload() -> int
-  fn on_event(type string, payload int) -> int
+  include NATIVE_LIFECYCLE
   fn issue(value int) -> sku
   fn available(value sku) -> int

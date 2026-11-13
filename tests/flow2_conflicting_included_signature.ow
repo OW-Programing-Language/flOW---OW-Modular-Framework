@@ -1,0 +1,7 @@
+module_type BASE:
+  fn name() -> string
+module_type BROKEN:
+  include BASE
+  fn name() -> int
+main:
+  print: "ERROR: conflicting included export accepted"
