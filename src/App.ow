@@ -1,6 +1,7 @@
 import "Registry.ow"
 import "Module.ow"
 import "Functor.ow"
+import "ModuleFunctor.ow"
 
 # The application validates service contract names at boot.
 # tools/verify_contracts.py checks OW interface member signatures before run.
@@ -48,6 +49,15 @@ class App:
     set m Module: checked_functor.make(this)
     call: this.use(m)
     return: m
+
+  # Apply a typed module-parameterized functor, rather than injecting App.
+  # The functor validates its public input API via an OW typed binding.
+  # The output must be a Module and will be registered for boot().
+  fn apply_to(f, dependency):
+    set checked ModuleFunctor: f
+    set result Module: checked.make(dependency)
+    call: this.use(result)
+    return: result
 
   # Legacy name-only service registration.
   fn provide(name, val):

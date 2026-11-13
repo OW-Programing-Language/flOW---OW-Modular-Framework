@@ -25,7 +25,12 @@
           "service": "inventory",
           "interface": "InventoryApi"
         }
-      ]
+      ],
+      "factory_type": "ModuleFunctor",
+      "parameter": {
+        "interface": "InventoryApi",
+        "source_service": "inventory"
+      }
     },
     {
       "name": "notifications",

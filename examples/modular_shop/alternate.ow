@@ -1,0 +1,19 @@
+import "../../src/App.ow"
+import "inventory/infra/AlternateInventoryModule.ow"
+import "orders/infra/OrdersFunctor.ow"
+
+# Substitution: same functor, entirely different inventory implementation.
+main:
+  set app: new App()
+  set warehouse: new AlternateInventoryModule()
+  set makeOrders: new OrdersFunctor()
+  call: app.use(warehouse)
+  call: app.apply_to(makeOrders, warehouse)
+  call: assert(app.boot() == 1, "same functor must accept alternate inventory")
+
+  set orders OrdersApi: app.service("orders")
+  set inventory InventoryApi: app.service("inventory")
+  call: assert(inventory.level() == 100, "alternate inventory has different state")
+  call: assert(orders.place(7) == 1, "orders use alternate inventory")
+  call: assert(inventory.level() == 93, "alternate inventory receives order")
+  print: "PASS: functor application is implementation-independent"

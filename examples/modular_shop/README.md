@@ -23,19 +23,20 @@ order.placed events, and Notifications subscribes without importing Orders.
 Orders must never import inventory/infra/. Only main.ow, as the application
 composition root, imports the three infrastructure functors.
 
-Each functor implements Functor.make(app) and constructs a configured Module:
+InventoryFunctor and NotificationsFunctor implement Functor.make(app).\nOrdersFunctor implements ModuleFunctor.make(inventory) and receives an InventoryApi\nmodule value explicitly. All three create Modules:
 InventoryFunctor uses inventory.start_stock, NotificationsFunctor reads the
-notifications.prefix setting, and OrdersFunctor constructs an OrdersModule.
+notifications.prefix setting, and OrdersFunctor constructs an OrdersModule using the injected API.
 During boot, flOW verifies its name-based and declared typed service dependencies.
 
 ## Usage
 
 ```bash
 python3 tools/verify_contracts.py examples/modular_shop
-python3 -m unittest discover -s tests -p test_contracts.py
+python3 -m unittest discover -s tests -p 'test_*.py'
 ow run tests/run.ow
 ow run tests/runtime_contracts.ow
 ow run examples/modular_shop/main.ow
+ow run examples/modular_shop/alternate.ow
 ```
 
 The example starts with 25 items, places two orders (3 and 2), disables
@@ -54,3 +55,5 @@ Unlike OCaml's module signatures and compile-time functors, flOW's functors
 are currently runtime factories parameterized by an App context. OW interfaces
 do not yet declare parameter or return types; no full static OCaml module type
 system is claimed. Always run the preflight verifier in CI before execution.
+
+The [alternate.ow](alternate.ow) variant reuses **the same OrdersFunctor**\nwith a second InventoryApi implementation. The negative test\n`tests/invalid_functor_argument.ow` proves a module without InventoryApi is\nrejected at runtime.\n

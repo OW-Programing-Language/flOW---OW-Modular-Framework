@@ -179,12 +179,26 @@ def verify(project: Path, core: Path | None = None) -> list[str]:
             errors.append(f"{name}: {klass} must implement Module and {iface}")
         if not fac_decl or fac_decl.kind != "class" or fac_decl.path != paths["functor"]:
             errors.append(f"{name}: missing functor class {factory}")
-        elif not inherits(fac_decl, "Functor"):
-            errors.append(f"{name}: {factory} must implement Functor")
+        elif not inherits(fac_decl, module.get("factory_type", "Functor")):
+            errors.append(f"{name}: {factory} must implement {module.get('factory_type', 'Functor')}")
 
         factory_text = paths["functor"].read_text(encoding="utf-8")
         if not re.search(r"\bnew\s+" + re.escape(klass) + r"\s*\(", factory_text):
             errors.append(f"{name}: {factory} does not construct {klass}")
+        parameter = module.get("parameter")
+        if parameter:
+            param_iface = parameter.get("interface")
+            source = parameter.get("source_service")
+            functor_sig = fac_decl.methods.get("make") if fac_decl else None
+            if functor_sig is None or functor_sig[0] != 1:
+                errors.append(f"{name}: parameterized functor must have make(dependency)")
+            if not re.search(r"set\s+\w+\s+" + re.escape(param_iface or "") + r":\s*\w+", factory_text):
+                errors.append(f"{name}: functor input must bind its dependency as {param_iface}")
+            if not re.search(r"set\s+\w+\s+" + re.escape(iface) +
+                             r":\s*new\s+" + re.escape(klass) + r"\s*\(", factory_text):
+                errors.append(f"{name}: functor output must be typed {iface}")
+            if (source, param_iface) not in {(x["service"], x["interface"]) for x in reqs}:
+                errors.append(f"{name}: functor parameter must match declared required service {source}:{param_iface}")
         impl_text = paths["implementation"].read_text(encoding="utf-8")
         provided = set(PROVIDE.findall(impl_text))
         if provided != {(service, iface)}:
@@ -195,7 +209,7 @@ def verify(project: Path, core: Path | None = None) -> list[str]:
             errors.append(f"{name}: required contracts mismatch: expected {expected}, got {actual}")
         bindings = set(BIND.findall(impl_text))
         for req in reqs:
-            if (req["interface"], req["service"]) not in bindings:
+            if not parameter and (req["interface"], req["service"]) not in bindings:
                 errors.append(f"{name}: missing typed binding of {req['service']} to {req['interface']}")
 
     for module in modules:

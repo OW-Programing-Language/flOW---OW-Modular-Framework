@@ -1,0 +1,44 @@
+import "../api/InventoryApi.ow"
+
+# A second implementation of InventoryApi.
+# The *same* OrdersFunctor works with InventoryModule or AlternateInventoryModule.
+class AlternateInventoryModule(Module, InventoryApi):
+  field stock
+  field initial_stock
+
+  fn new():
+    set this.stock: 100
+    set this.initial_stock: 100
+
+  fn name():
+    return: "inventory"
+
+  fn requires():
+    return: array(0, 0)
+
+  fn register(app):
+    set api InventoryApi: this
+    call: app.provide_as("inventory", "InventoryApi", api)
+    return: 0
+
+  fn start(app):
+    return: 0
+
+  fn on_event(type, payload):
+    if: type == "order.placed"
+      set this.stock: this.stock - payload
+    return: 0
+
+  fn reload(app):
+    set this.stock: this.initial_stock
+    return: 0
+
+  fn level():
+    return: this.stock
+
+  fn reserve(quantity):
+    if: quantity < 1
+      return: 0
+    if: quantity > this.stock
+      return: 0
+    return: 1

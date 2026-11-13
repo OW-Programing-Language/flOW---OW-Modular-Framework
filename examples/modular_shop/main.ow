@@ -10,8 +10,9 @@ main:
   call: app.set_config("inventory.start_stock", 25)
   call: app.set_config("notifications.prefix", "[shop]")
 
-  call: app.apply(new InventoryFunctor())
-  call: app.apply(new OrdersFunctor())
+  set inventoryModule: app.apply(new InventoryFunctor())
+  set ordersFunctor: new OrdersFunctor()
+  call: app.apply_to(ordersFunctor, inventoryModule)
   call: app.apply(new NotificationsFunctor())
   call: assert(app.boot() == 1, "contract-checked app must boot")
 

@@ -6,10 +6,10 @@ class OrdersModule(Module, OrdersApi):
   field inventory
   field count
 
-  fn new():
+  fn new(inventory):
     set this.count: 0
     set this.app: 0
-    set this.inventory: 0
+    set this.inventory: inventory
 
   fn name():
     return: "orders"
@@ -26,8 +26,8 @@ class OrdersModule(Module, OrdersApi):
   fn start(app):
     # OW checks nominal interface membership of service here.
     # The preflight verifier additionally validates methods and arity.
-    set dep InventoryApi: app.service("inventory")
-    set this.inventory: dep
+    set typed_dep InventoryApi: this.inventory
+    set this.inventory: typed_dep
     set this.app: app
     return: 0
 

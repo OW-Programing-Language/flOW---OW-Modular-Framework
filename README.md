@@ -178,3 +178,41 @@ examples and tests were updated for this rule.
 interfaces in the preflight step. OW does **not** currently implement OCaml's
 full typed static module/functor system, argument/return type checking or
 generative functors. These checks become mandatory for CI via the workflow.
+
+## Module-parameterized functors (OCaml-inspired)
+
+The original `Functor.make(app)` only read settings from the app context.
+The new `ModuleFunctor.make(dependency)` receives a real **module interface**.
+The app composition root can apply it with:
+
+```ow
+set app: new App()
+set inventoryModule: app.apply(new InventoryFunctor())
+set ordersFunctor: new OrdersFunctor()
+call: app.apply_to(ordersFunctor, inventoryModule)
+call: app.boot()
+```
+
+`OrdersFunctor.make(inventory)` begins with `set dependency InventoryApi:
+inventory` and builds a module checked as `OrdersApi`. Passing an unrelated
+module raises an OW type error. The same OrdersFunctor also accepts an entirely
+different implementation of InventoryApi, as demonstrated in
+[alternate.ow](examples/modular_shop/alternate.ow).
+
+The preflight verifier additionally checks its declared parameter and result
+contracts before execution. This means module-to-module parameterization, not
+just application-wide configuration.
+
+```bash
+python3 tools/verify_contracts.py
+python3 -m unittest discover -s tests -p 'test_*.py'
+ow run examples/modular_shop/main.ow
+ow run examples/modular_shop/alternate.ow
+```
+
+**Important limits:** This is typed *runtime* module application plus preflight
+source verification. The OW compiler does **not** yet provide OCaml's full
+module-language semantics: full type inference, `with type` sharing constraints,
+abstract type sealing, higher-order functor types, or applicative/generative
+type identities. The API is a practical step towards those capabilities, not
+feature parity with OCaml.
