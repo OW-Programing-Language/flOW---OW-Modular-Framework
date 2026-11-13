@@ -37,7 +37,7 @@ signatures, arguments, abstract SKU identity and public exports. A private
 `Inventory.sku` representation cannot be accessed by consumers.
 
 ```ow
-set orders ORDERS: MakeOrders(Warehouse)
+set orders ORDERS: MakeOrders(Shop.Inventory)
 set notifications NOTIFICATIONS: MakeNotifications(orders)
 ```
 
@@ -48,7 +48,7 @@ them into untyped services:
 set app: new App()
 call: app.use_native_as(notifications, "NOTIFICATIONS")
 call: app.use_native_as(orders, "ORDERS")
-call: app.use_native_as(Warehouse, "INVENTORY")
+call: app.use_native_as(Shop.Inventory, "INVENTORY")
 call: assert(app.boot() == 1)
 set inventory INVENTORY: app.service("inventory")
 ```
@@ -76,5 +76,23 @@ ow run examples/flow2_shop/main.ow
 
 See `tests/` for positive and negative integration fixtures. Native modules
 use an integer event payload in the current `NATIVE_LIFECYCLE` signature,
-and adapter calls are interpreter-managed. OW's native LLVM backend does
-not yet compile module/functor values.
+and adapter calls are interpreter-managed. OW's LLVM backend now compiles a static integer-only module/functor subset,
+but still rejects dynamic module packages and abstract-type representations.
+
+## Advanced interpreter + native compiler example
+
+[advanced.ow](advanced.ow) combines the flOW application runtime with:
+
+- A lexically nested, signature-sealed Catalog module;
+- Implementation-level `include` that preserves the original implementation;
+- Packaged first-class modules stored in arrays and records, followed by a
+  checked `unpack` into a typed interface;
+- Inventory/Orders/Notifications native OW functors managed by flOW.
+
+Run `ow check examples/flow2_shop/advanced.ow` and
+`ow run examples/flow2_shop/advanced.ow`.
+
+For LLVM, the supported static i32 module/functor subset can be tested with
+`ow llvm ow-lang/examples/module_calculus/native_llvm.ow /tmp/test.ll`
+from the CI workspace (the source lives in the ow-lang checkout). Dynamic
+first-class module packages in advanced.ow remain interpreter-only.
