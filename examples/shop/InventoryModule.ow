@@ -1,7 +1,7 @@
 # Inventory module: owns stock. Provides itself as the "inventory" service and
 # reacts to "order.placed" events by decrementing stock. The starting stock is a
 # parameter (set by a functor / config), and reload() resets to it.
-class InventoryModule:
+class InventoryModule(Module):
   field stock
   field start_stock
 

@@ -1,0 +1,4 @@
+# Public inventory contract. Other modules import only this file.
+interface InventoryApi:
+  fn level()
+  fn reserve(quantity)

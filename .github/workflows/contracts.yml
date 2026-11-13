@@ -1,0 +1,42 @@
+name: flOW contracts and OW integration
+
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'examples/**'
+      - 'tests/**'
+      - 'tools/**'
+      - '.github/workflows/contracts.yml'
+  pull_request:
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OW-Programing-Language/ow-lang
+          path: ow-lang
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate interfaces, functors, and module boundaries
+        run: |
+          python3 tools/verify_contracts.py
+          python3 -m unittest discover -s tests -p test_contracts.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: ow-lang/pom.xml
+      - name: Build OW interpreter
+        run: mvn -q -f ow-lang/pom.xml -DskipTests package
+      - name: Run OW examples and runtime tests
+        run: |
+          java -jar ow-lang/target/OwIDE.jar run tests/run.ow
+          java -jar ow-lang/target/OwIDE.jar run tests/runtime_contracts.ow
+          java -jar ow-lang/target/OwIDE.jar run examples/shop/main.ow
+          java -jar ow-lang/target/OwIDE.jar run examples/modular_shop/main.ow

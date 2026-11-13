@@ -1,0 +1,11 @@
+import "NotificationsModule.ow"
+
+class NotificationsFunctor(Functor):
+  fn new():
+    return: 0
+
+  fn make(app):
+    set prefix: app.config_or("notifications.prefix", "[notify]")
+    set m: new NotificationsModule()
+    call: m.configure(prefix)
+    return: m

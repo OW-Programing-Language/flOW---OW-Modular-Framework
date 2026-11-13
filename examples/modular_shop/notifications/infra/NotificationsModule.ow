@@ -1,0 +1,40 @@
+import "../api/NotificationsApi.ow"
+
+class NotificationsModule(Module, NotificationsApi):
+  field prefix
+  field delivered
+
+  fn new():
+    set this.prefix: "[notify]"
+    set this.delivered: 0
+
+  fn configure(prefix):
+    set this.prefix: prefix
+    return: 0
+
+  fn name():
+    return: "notifications"
+
+  fn requires():
+    return: array(0, 0)
+
+  fn register(app):
+    set api NotificationsApi: this
+    call: app.provide_as("notifications", "NotificationsApi", api)
+    return: 0
+
+  fn start(app):
+    return: 0
+
+  fn on_event(type, payload):
+    if: type == "order.placed"
+      set this.delivered: this.delivered + 1
+      print: this.prefix + " order confirmed: " + payload
+    return: 0
+
+  fn reload(app):
+    set this.delivered: 0
+    return: 0
+
+  fn delivered_count():
+    return: this.delivered

@@ -1,0 +1,42 @@
+{
+  "modules": [
+    {
+      "name": "inventory",
+      "service": "inventory",
+      "interface": "InventoryApi",
+      "api": "inventory/api/InventoryApi.ow",
+      "class": "InventoryModule",
+      "implementation": "inventory/infra/InventoryModule.ow",
+      "factory": "InventoryFunctor",
+      "functor": "inventory/infra/InventoryFunctor.ow",
+      "requires": []
+    },
+    {
+      "name": "orders",
+      "service": "orders",
+      "interface": "OrdersApi",
+      "api": "orders/api/OrdersApi.ow",
+      "class": "OrdersModule",
+      "implementation": "orders/infra/OrdersModule.ow",
+      "factory": "OrdersFunctor",
+      "functor": "orders/infra/OrdersFunctor.ow",
+      "requires": [
+        {
+          "service": "inventory",
+          "interface": "InventoryApi"
+        }
+      ]
+    },
+    {
+      "name": "notifications",
+      "service": "notifications",
+      "interface": "NotificationsApi",
+      "api": "notifications/api/NotificationsApi.ow",
+      "class": "NotificationsModule",
+      "implementation": "notifications/infra/NotificationsModule.ow",
+      "factory": "NotificationsFunctor",
+      "functor": "notifications/infra/NotificationsFunctor.ow",
+      "requires": []
+    }
+  ]
+}

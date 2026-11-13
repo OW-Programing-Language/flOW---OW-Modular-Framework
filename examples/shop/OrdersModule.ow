@@ -1,7 +1,7 @@
 # Orders module: places orders by publishing "order.placed" events. Declares a
 # dependency on the "inventory" service (checked by App.verify at boot) but talks
 # to the rest of the app only through events.
-class OrdersModule:
+class OrdersModule(Module):
   fn new():
     return: 0
 
